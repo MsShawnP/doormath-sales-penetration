@@ -1,0 +1,13 @@
+[project]
+name = "cinderhaven-store-universe"
+version = "0.1.0"
+description = "Shared store universe data package for Cinderhaven CPG analytics tools"
+requires-python = ">=3.11"
+dependencies = ["pandas>=2.0", "numpy>=1.24"]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
