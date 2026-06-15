@@ -1,7 +1,7 @@
 # Door Math — Plan
 
 **Tier:** Medium
-**Status:** Complete — all units implemented and committed
+**Status:** Active — performance refactor done, 3 visual bugs remain
 
 ## Implementation Units (from plan doc)
 
