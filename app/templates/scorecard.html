@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Distribution Scorecard &mdash; {{ quarter_label }}</title>
+<style>
+  @page {
+    size: letter portrait;
+    margin: 0.6in;
+    @bottom-left {
+      content: "Cinderhaven Provisions \2014 Distribution Scorecard";
+      font-family: 'Source Sans 3', 'Source Sans Pro', 'Liberation Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 9pt;
+      color: {{ colors.text_secondary }};
+    }
+    @bottom-right {
+      content: "Page " counter(page);
+      font-family: 'Source Sans 3', 'Source Sans Pro', 'Liberation Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 9pt;
+      color: {{ colors.text_secondary }};
+    }
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: {{ fonts.sans }}, 'Liberation Sans', sans-serif;
+    font-size: 10pt;
+    color: {{ colors.text_primary }};
+    background: #ffffff;
+    line-height: 1.4;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 18pt;
+    border-bottom: 2px solid {{ colors.ink }};
+    padding-bottom: 10pt;
+  }
+  .header h1 {
+    font-family: {{ fonts.serif }}, 'Liberation Serif', Georgia, serif;
+    font-size: 20pt;
+    font-weight: 700;
+    color: {{ colors.ink }};
+    margin-bottom: 2pt;
+    letter-spacing: -0.01em;
+  }
+  .header .subtitle {
+    font-family: {{ fonts.sans }}, 'Liberation Sans', sans-serif;
+    font-size: 11pt;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: {{ colors.text_secondary }};
+    margin-bottom: 4pt;
+  }
+  .header .meta {
+    font-size: 9pt;
+    color: {{ colors.text_secondary }};
+  }
+
+  /* ── Hero block ── */
+  .hero {
+    text-align: center;
+    margin-bottom: 18pt;
+  }
+  .hero-pct {
+    font-family: {{ fonts.serif }}, 'Liberation Serif', Georgia, serif;
+    font-size: 48pt;
+    font-weight: 700;
+    color: {{ colors.ink }};
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .hero-subtext {
+    font-size: 10pt;
+    color: {{ colors.text_secondary }};
+    margin-top: 4pt;
+  }
+  .hero-trend {
+    font-size: 10pt;
+    font-weight: 600;
+    margin-top: 2pt;
+  }
+  .trend-up { color: {{ colors.teal }}; }
+  .trend-down { color: {{ colors.risk }}; }
+  .trend-flat { color: {{ colors.text_secondary }}; }
+
+  /* ── Section titles ── */
+  .section-title {
+    font-family: {{ fonts.serif }}, 'Liberation Serif', Georgia, serif;
+    font-size: 13pt;
+    font-weight: 700;
+    color: {{ colors.ink }};
+    margin-bottom: 6pt;
+    margin-top: 14pt;
+  }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin-bottom: 12pt;
+  }
+  th {
+    text-align: left;
+    padding: 4pt 6pt;
+    border-bottom: 1.5pt solid {{ colors.ink }};
+    font-weight: 600;
+    color: {{ colors.ink }};
+    font-size: 8.5pt;
+    white-space: nowrap;
+  }
+  th.right { text-align: right; }
+  td {
+    padding: 3pt 6pt;
+    border-bottom: 0.5pt solid {{ colors.gridline }};
+    color: {{ colors.text_primary }};
+  }
+  td.right { text-align: right; }
+  tr.alt td { background-color: {{ colors.canvas }}; }
+
+  /* Delta coloring */
+  .delta-up { color: {{ colors.teal }}; }
+  .delta-down { color: {{ colors.risk }}; }
+  .delta-flat { color: {{ colors.text_secondary }}; }
+
+  /* Weeks-silent risk coloring */
+  .weeks-high { color: {{ colors.risk }}; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>Cinderhaven Provisions</h1>
+  <div class="subtitle">Distribution Scorecard</div>
+  <div class="meta">{{ quarter_label }} &bull; Generated {{ generation_date }}</div>
+</div>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-pct">{{ fmt_pct(hero_pct) }}</div>
+  <div class="hero-subtext">of addressable doors carrying at least one Cinderhaven item</div>
+  {% if hero_delta > 0 %}
+  <div class="hero-trend trend-up">&uarr; {{ "%.1f"|format(hero_delta * 100) }} pp from prior quarter</div>
+  {% elif hero_delta < 0 %}
+  <div class="hero-trend trend-down">&darr; {{ "%.1f"|format((hero_delta * 100)|abs) }} pp from prior quarter</div>
+  {% else %}
+  <div class="hero-trend trend-flat">&rarr; 0.0 pp from prior quarter</div>
+  {% endif %}
+</div>
+
+<!-- Retailer Summary -->
+<h2 class="section-title">Retailer Summary</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Retailer</th>
+      <th>Carrying / Addressable</th>
+      <th class="right">Penetration %</th>
+      <th class="right">ACV%</th>
+      <th class="right">TDP</th>
+      <th class="right">&Delta; vs Prior Qtr</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in retailer_rows %}
+    <tr{% if loop.index is odd %} class="alt"{% endif %}>
+      <td>{{ row.name }}</td>
+      <td>{{ fmt_number(row.carrying) }} / {{ fmt_number(row.addressable) }}</td>
+      <td class="right">{{ fmt_pct(row.penetration) }}</td>
+      <td class="right">{{ fmt_pct(row.acv_pct) }}</td>
+      <td class="right">{{ "%.1f"|format(row.tdp) }}</td>
+      <td class="right {% if row.delta > 0 %}delta-up{% elif row.delta < 0 %}delta-down{% else %}delta-flat{% endif %}">
+        {% if row.delta > 0 %}&uarr;{% elif row.delta < 0 %}&darr;{% else %}&rarr;{% endif %}
+        {{ "%.1f"|format((row.delta * 100)|abs) }} pp
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Product Line Summary -->
+<h2 class="section-title">Product Line Summary</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Product Line</th>
+      <th>Carrying / Addressable</th>
+      <th class="right">Penetration %</th>
+      <th class="right">ACV%</th>
+      <th class="right">&Delta; vs Prior Qtr</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in product_line_rows %}
+    <tr{% if loop.index is odd %} class="alt"{% endif %}>
+      <td>{{ row.name }}</td>
+      <td>{{ fmt_number(row.carrying) }} / {{ fmt_number(row.addressable) }}</td>
+      <td class="right">{{ fmt_pct(row.penetration) }}</td>
+      <td class="right">{{ fmt_pct(row.acv_pct) }}</td>
+      <td class="right {% if row.delta > 0 %}delta-up{% elif row.delta < 0 %}delta-down{% else %}delta-flat{% endif %}">
+        {% if row.delta > 0 %}&uarr;{% elif row.delta < 0 %}&darr;{% else %}&rarr;{% endif %}
+        {{ "%.1f"|format((row.delta * 100)|abs) }} pp
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Top Exceptions -->
+<h2 class="section-title">Top Exceptions</h2>
+{% if top_exceptions %}
+<table>
+  <thead>
+    <tr>
+      <th>SKU ID</th>
+      <th>Item Name</th>
+      <th>Retailer</th>
+      <th class="right">Weeks Silent</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for exc in top_exceptions %}
+    <tr{% if loop.index is odd %} class="alt"{% endif %}>
+      <td>{{ exc.sku_id }}</td>
+      <td>{{ exc.item_name }}</td>
+      <td>{{ exc.retailer }}</td>
+      <td class="right{% if exc.weeks_silent > 12 %} weeks-high{% endif %}">{{ exc.weeks_silent }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p style="font-size: 9pt; color: {{ colors.text_secondary }};">No exceptions for the current filters.</p>
+{% endif %}
+
+</body>
+</html>
