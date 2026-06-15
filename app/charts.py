@@ -1,0 +1,56 @@
+"""Shared Economist-style chart defaults and SVG config for Plotly figures."""
+
+from app.constants import (
+    CANVAS, GRIDLINE, INK, TEXT_SECONDARY,
+    FONT_SANS, FONT_SERIF,
+)
+
+
+def economist_layout(**overrides):
+    """Return a Plotly layout dict with Lailara/Economist-style defaults.
+
+    Apply to any figure: fig.update_layout(**economist_layout())
+    Overrides replace individual keys, not nested dicts—pass full sub-dicts
+    when overriding xaxis, yaxis, etc.
+    """
+    defaults = dict(
+        paper_bgcolor=CANVAS,
+        plot_bgcolor=CANVAS,
+        font=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
+        title=dict(font=dict(family=FONT_SERIF, size=22, color=INK)),
+        xaxis=dict(
+            showgrid=False,
+            showline=True,
+            linecolor=GRIDLINE,
+            tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor=GRIDLINE,
+            gridwidth=1,
+            showline=False,
+            tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
+        ),
+        margin=dict(l=60, r=20, t=60, b=40),
+        hoverlabel=dict(
+            bgcolor=CANVAS,
+            font=dict(family=FONT_SANS, size=13, color=INK),
+            bordercolor=GRIDLINE,
+        ),
+        dragmode=False,
+        showlegend=True,
+        legend=dict(
+            font=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
+            bgcolor='rgba(0,0,0,0)',
+        ),
+    )
+    defaults.update(overrides)
+    return defaults
+
+
+# SVG-based chart config — disable mode bar, render as SVG for print
+CHART_CONFIG = {
+    'displayModeBar': False,
+    'responsive': True,
+    'toImageButtonOptions': {'format': 'svg'},
+}
