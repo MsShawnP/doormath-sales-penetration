@@ -7,20 +7,20 @@ from dash import html
 
 def wrap(layout, tool_name: str, footer_note: str = None, no_container: bool = False):
     footer_children = [
-        html.P([
-            "Built by ",
-            html.A(
-                "Lailara LLC",
-                href="https://lailarallc.com",
-                target="_blank",
-                rel="noopener",
-            ),
-        ]),
+        html.P(
+            [
+                "Built by ",
+                html.A(
+                    "Lailara LLC",
+                    href="https://lailarallc.com",
+                    target="_blank",
+                    rel="noopener",
+                ),
+            ]
+        ),
     ]
     if footer_note:
-        footer_children.append(
-            html.P(footer_note, className="lailara-footer-note")
-        )
+        footer_children.append(html.P(footer_note, className="lailara-footer-note"))
 
     if no_container:
         main_content = html.Main(layout, className="lailara-main")

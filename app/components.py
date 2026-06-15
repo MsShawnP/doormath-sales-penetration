@@ -3,8 +3,15 @@
 from dash import html
 
 from app.constants import (
-    CARD_BG, CARD_TEXT, CARD_SUBTITLE, CARD_MUTED,
-    CARD_BORDER, CARD_ITEM, FAIL_BG, TEXT_SECONDARY, RED_42,
+    CARD_BG,
+    CARD_BORDER,
+    CARD_ITEM,
+    CARD_MUTED,
+    CARD_SUBTITLE,
+    CARD_TEXT,
+    FAIL_BG,
+    RED_42,
+    TEXT_SECONDARY,
 )
 
 
@@ -23,11 +30,11 @@ def dark_callout_card(title, subtitle=None, rows=None):
         html.H3(
             title,
             style={
-                'color': CARD_TEXT,
-                'fontFamily': 'var(--ll-serif)',
-                'fontSize': '20px',
-                'fontWeight': '700',
-                'margin': '0 0 4px 0',
+                "color": CARD_TEXT,
+                "fontFamily": "var(--ll-serif)",
+                "fontSize": "20px",
+                "fontWeight": "700",
+                "margin": "0 0 4px 0",
             },
         ),
     ]
@@ -37,10 +44,10 @@ def dark_callout_card(title, subtitle=None, rows=None):
             html.P(
                 subtitle,
                 style={
-                    'color': CARD_SUBTITLE,
-                    'fontFamily': 'var(--ll-sans)',
-                    'fontSize': '14px',
-                    'margin': '0 0 12px 0',
+                    "color": CARD_SUBTITLE,
+                    "fontFamily": "var(--ll-sans)",
+                    "fontSize": "14px",
+                    "margin": "0 0 12px 0",
                 },
             )
         )
@@ -51,41 +58,41 @@ def dark_callout_card(title, subtitle=None, rows=None):
                 html.Div(
                     [
                         html.Span(
-                            row['label'],
+                            row["label"],
                             style={
-                                'color': CARD_MUTED,
-                                'fontFamily': 'var(--ll-sans)',
-                                'fontSize': '13px',
+                                "color": CARD_MUTED,
+                                "fontFamily": "var(--ll-sans)",
+                                "fontSize": "13px",
                             },
                         ),
                         html.Span(
-                            row['value'],
+                            row["value"],
                             style={
-                                'color': CARD_ITEM,
-                                'fontFamily': 'var(--ll-sans)',
-                                'fontSize': '14px',
-                                'fontWeight': '600',
+                                "color": CARD_ITEM,
+                                "fontFamily": "var(--ll-sans)",
+                                "fontSize": "14px",
+                                "fontWeight": "600",
                             },
                         ),
                     ],
                     style={
-                        'display': 'flex',
-                        'justifyContent': 'space-between',
-                        'alignItems': 'center',
-                        'padding': '6px 0',
-                        'borderBottom': f'1px solid {CARD_BORDER}',
+                        "display": "flex",
+                        "justifyContent": "space-between",
+                        "alignItems": "center",
+                        "padding": "6px 0",
+                        "borderBottom": f"1px solid {CARD_BORDER}",
                     },
                 )
             )
 
     return html.Div(
         children,
-        className='dark-callout',
+        className="dark-callout",
         style={
-            'backgroundColor': CARD_BG,
-            'padding': '20px 24px',
-            'borderRadius': '2px',
-            'marginTop': '16px',
+            "backgroundColor": CARD_BG,
+            "padding": "20px 24px",
+            "borderRadius": "2px",
+            "marginTop": "16px",
         },
     )
 
@@ -100,19 +107,19 @@ def annotation_callout(text):
         html.P(
             text,
             style={
-                'margin': '0',
-                'fontFamily': 'var(--ll-sans)',
-                'fontSize': '15px',
-                'lineHeight': '1.5',
-                'color': TEXT_SECONDARY,
+                "margin": "0",
+                "fontFamily": "var(--ll-sans)",
+                "fontSize": "15px",
+                "lineHeight": "1.5",
+                "color": TEXT_SECONDARY,
             },
         ),
-        className='insight-line',
+        className="insight-line",
         style={
-            'borderLeft': f'3px solid {CARD_BG}',
-            'paddingLeft': '16px',
-            'marginTop': '12px',
-            'marginBottom': '12px',
+            "borderLeft": f"3px solid {CARD_BG}",
+            "paddingLeft": "16px",
+            "marginTop": "12px",
+            "marginBottom": "12px",
         },
     )
 
@@ -131,9 +138,9 @@ def error_banner(message, retry_id=None):
         html.Span(
             message,
             style={
-                'fontFamily': 'var(--ll-sans)',
-                'fontSize': '14px',
-                'color': RED_42,
+                "fontFamily": "var(--ll-sans)",
+                "fontSize": "14px",
+                "color": RED_42,
             },
         ),
     ]
@@ -141,25 +148,25 @@ def error_banner(message, retry_id=None):
     if retry_id:
         children.append(
             html.Button(
-                'Retry',
+                "Retry",
                 id=retry_id,
                 n_clicks=0,
                 style={
-                    'marginLeft': '12px',
-                    'cursor': 'pointer',
+                    "marginLeft": "12px",
+                    "cursor": "pointer",
                 },
             )
         )
 
     return html.Div(
         children,
-        className='error-banner',
+        className="error-banner",
         style={
-            'display': 'flex',
-            'alignItems': 'center',
-            'padding': '12px 16px',
-            'backgroundColor': FAIL_BG,
-            'borderRadius': '2px',
-            'marginBottom': '16px',
+            "display": "flex",
+            "alignItems": "center",
+            "padding": "12px 16px",
+            "backgroundColor": FAIL_BG,
+            "borderRadius": "2px",
+            "marginBottom": "16px",
         },
     )

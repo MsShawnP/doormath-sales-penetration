@@ -122,20 +122,20 @@ def apply_slow_leak(scan_df: pd.DataFrame) -> pd.DataFrame:
         # Get the set of stores scanning in the first quarter of the leak
         start_q = config["start_quarter"]
         start_sort, first_q_end = _get_quarter_weeks(start_q)
-        first_q_mask = sku_mask & (df["_week_sort"] >= start_sort) & (df["_week_sort"] <= first_q_end)
+        first_q_mask = (
+            sku_mask & (df["_week_sort"] >= start_sort) & (df["_week_sort"] <= first_q_end)
+        )
         scanning_stores = list(df.loc[first_q_mask & df["scanned"], "store_id"].unique())
 
         # Filter to affected retailers only
         if config["retailers_affected_order"] == "all":
             affected_stores = list(scanning_stores)
         else:
-            affected_retailer_ids = set(config["retailers_affected_order"])
             # Order stores by retailer priority (Regional first, then Sprouts, then Kroger)
             affected_stores = []
             for retailer_id in config["retailers_affected_order"]:
                 retailer_stores = [
-                    s for s in scanning_stores
-                    if "-".join(s.split("-")[:2]) == retailer_id
+                    s for s in scanning_stores if "-".join(s.split("-")[:2]) == retailer_id
                 ]
                 rng.shuffle(retailer_stores)
                 affected_stores.extend(retailer_stores)

@@ -3,7 +3,6 @@
 import numpy as np
 import pandas as pd
 import pytest
-
 from cinderhaven_store_universe import get_auth_matrix, get_scan_data
 from cinderhaven_store_universe.slow_leak import (
     QUARTER_ENDS,
@@ -20,9 +19,7 @@ def _penetration_by_quarter(
 
     Penetration = doors scanning at least once in the quarter / doors authorized.
     """
-    auth_stores = set(
-        auth_df[(auth_df["sku_id"] == sku_id) & auth_df["authorized"]]["store_id"]
-    )
+    auth_stores = set(auth_df[(auth_df["sku_id"] == sku_id) & auth_df["authorized"]]["store_id"])
     n_authorized = len(auth_stores)
     if n_authorized == 0:
         return {}
@@ -36,9 +33,7 @@ def _penetration_by_quarter(
         q_start_sort = _week_to_sortable(q_start)
         q_end_sort = _week_to_sortable(q_end)
 
-        q_mask = (sku_scans["_week_sort"] >= q_start_sort) & (
-            sku_scans["_week_sort"] <= q_end_sort
-        )
+        q_mask = (sku_scans["_week_sort"] >= q_start_sort) & (sku_scans["_week_sort"] <= q_end_sort)
         q_data = sku_scans[q_mask]
 
         # Doors that scanned at least once in the quarter
@@ -104,8 +99,7 @@ class TestCHP_DG_003:
 
         # Late quarters should show larger average drops
         assert avg_late >= avg_early, (
-            f"Curve not accelerating: early avg drop {avg_early:.4f}, "
-            f"late avg drop {avg_late:.4f}"
+            f"Curve not accelerating: early avg drop {avg_early:.4f}, late avg drop {avg_late:.4f}"
         )
 
 
@@ -152,9 +146,7 @@ class TestCHP_SC_007:
         mean = np.mean(drops)
         if mean > 0:
             cv = std / mean
-            assert cv < 1.5, (
-                f"Drops not approximately linear: CV={cv:.2f}, drops={drops}"
-            )
+            assert cv < 1.5, f"Drops not approximately linear: CV={cv:.2f}, drops={drops}"
 
 
 class TestNonLeakSKUs:

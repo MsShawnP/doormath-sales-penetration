@@ -9,6 +9,8 @@ from app.constants import (
     CHICAGO_20,
     FAIL_BG,
     FAIL_TEXT,
+    FONT_SANS,
+    FONT_SERIF,
     GRIDLINE,
     HK_35,
     INK,
@@ -20,9 +22,6 @@ from app.constants import (
     WARN_BG,
     WARN_TEXT,
     WHITE,
-    FONT_SANS,
-    FONT_SERIF,
-    DEMO_AS_OF_DATE,
     fmt_number,
     fmt_pct,
 )
@@ -30,7 +29,7 @@ from app.constants import (
 
 def _get_template_env():
     """Get Jinja2 template environment."""
-    template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+    template_dir = os.path.join(os.path.dirname(__file__), "templates")
     return Environment(loader=FileSystemLoader(template_dir), autoescape=True)
 
 
@@ -51,40 +50,41 @@ def generate_scorecard_pdf(data):
         bytes: PDF content
     """
     env = _get_template_env()
-    template = env.get_template('scorecard.html')
+    template = env.get_template("scorecard.html")
 
     # Pass color constants to template
     context = {
         **data,
-        'colors': {
-            'canvas': CANVAS,
-            'ink': INK,
-            'text_primary': TEXT_PRIMARY,
-            'text_secondary': TEXT_SECONDARY,
-            'gridline': GRIDLINE,
-            'navy': CHICAGO_20,
-            'teal': HK_35,
-            'risk': TOKYO_40,
-            'pass_bg': PASS_BG,
-            'pass_text': PASS_TEXT,
-            'warn_bg': WARN_BG,
-            'warn_text': WARN_TEXT,
-            'fail_bg': FAIL_BG,
-            'fail_text': FAIL_TEXT,
-            'white': WHITE,
+        "colors": {
+            "canvas": CANVAS,
+            "ink": INK,
+            "text_primary": TEXT_PRIMARY,
+            "text_secondary": TEXT_SECONDARY,
+            "gridline": GRIDLINE,
+            "navy": CHICAGO_20,
+            "teal": HK_35,
+            "risk": TOKYO_40,
+            "pass_bg": PASS_BG,
+            "pass_text": PASS_TEXT,
+            "warn_bg": WARN_BG,
+            "warn_text": WARN_TEXT,
+            "fail_bg": FAIL_BG,
+            "fail_text": FAIL_TEXT,
+            "white": WHITE,
         },
-        'fonts': {
-            'serif': FONT_SERIF,
-            'sans': FONT_SANS,
+        "fonts": {
+            "serif": FONT_SERIF,
+            "sans": FONT_SANS,
         },
-        'fmt_pct': fmt_pct,
-        'fmt_number': fmt_number,
+        "fmt_pct": fmt_pct,
+        "fmt_number": fmt_number,
     }
 
     html_content = template.render(**context)
 
     try:
         from weasyprint import HTML
+
         return HTML(string=html_content).write_pdf()
     except (ImportError, OSError):
         raise RuntimeError(
@@ -101,33 +101,33 @@ def render_scorecard_html(data):
     PDF bytes.  Useful for verifying template rendering without WeasyPrint.
     """
     env = _get_template_env()
-    template = env.get_template('scorecard.html')
+    template = env.get_template("scorecard.html")
 
     context = {
         **data,
-        'colors': {
-            'canvas': CANVAS,
-            'ink': INK,
-            'text_primary': TEXT_PRIMARY,
-            'text_secondary': TEXT_SECONDARY,
-            'gridline': GRIDLINE,
-            'navy': CHICAGO_20,
-            'teal': HK_35,
-            'risk': TOKYO_40,
-            'pass_bg': PASS_BG,
-            'pass_text': PASS_TEXT,
-            'warn_bg': WARN_BG,
-            'warn_text': WARN_TEXT,
-            'fail_bg': FAIL_BG,
-            'fail_text': FAIL_TEXT,
-            'white': WHITE,
+        "colors": {
+            "canvas": CANVAS,
+            "ink": INK,
+            "text_primary": TEXT_PRIMARY,
+            "text_secondary": TEXT_SECONDARY,
+            "gridline": GRIDLINE,
+            "navy": CHICAGO_20,
+            "teal": HK_35,
+            "risk": TOKYO_40,
+            "pass_bg": PASS_BG,
+            "pass_text": PASS_TEXT,
+            "warn_bg": WARN_BG,
+            "warn_text": WARN_TEXT,
+            "fail_bg": FAIL_BG,
+            "fail_text": FAIL_TEXT,
+            "white": WHITE,
         },
-        'fonts': {
-            'serif': FONT_SERIF,
-            'sans': FONT_SANS,
+        "fonts": {
+            "serif": FONT_SERIF,
+            "sans": FONT_SANS,
         },
-        'fmt_pct': fmt_pct,
-        'fmt_number': fmt_number,
+        "fmt_pct": fmt_pct,
+        "fmt_number": fmt_number,
     }
 
     return template.render(**context)

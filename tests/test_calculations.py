@@ -1,98 +1,99 @@
 """Tests for the centralized calculations module."""
 
 import pytest
-
-from cinderhaven_store_universe import get_stores, get_auth_matrix, get_scan_data
+from cinderhaven_store_universe import get_auth_matrix, get_scan_data, get_stores
 from cinderhaven_store_universe.constants import DEMO_AS_OF_DATE
 
 from app.calculations import (
+    calc_acv_pct,
+    calc_penetration_rate,
+    calc_period_delta,
+    calc_tdp,
     quarter_to_weeks,
     quarters_in_range,
-    calc_penetration_rate,
-    calc_acv_pct,
-    calc_tdp,
-    calc_period_delta,
 )
-
 
 # -- quarter_to_weeks --
 
+
 def test_quarter_to_weeks_q1_returns_13_weeks():
     """Q1 2024 produces 13 weeks from W01 through W13."""
-    weeks = quarter_to_weeks('Q1 2024')
+    weeks = quarter_to_weeks("Q1 2024")
     assert len(weeks) == 13
-    assert weeks[0] == '2024-W01'
-    assert weeks[-1] == '2024-W13'
+    assert weeks[0] == "2024-W01"
+    assert weeks[-1] == "2024-W13"
 
 
 def test_quarter_to_weeks_q4_returns_w40_to_w52():
     """Q4 2025 produces weeks W40 through W52."""
-    weeks = quarter_to_weeks('Q4 2025')
+    weeks = quarter_to_weeks("Q4 2025")
     assert len(weeks) == 13
-    assert weeks[0] == '2025-W40'
-    assert weeks[-1] == '2025-W52'
+    assert weeks[0] == "2025-W40"
+    assert weeks[-1] == "2025-W52"
     # Verify no overlap with Q3
-    assert '2025-W39' not in weeks
+    assert "2025-W39" not in weeks
 
 
 def test_quarter_to_weeks_q2_boundaries():
     """Q2 starts at W14 and ends at W26."""
-    weeks = quarter_to_weeks('Q2 2025')
+    weeks = quarter_to_weeks("Q2 2025")
     assert len(weeks) == 13
-    assert weeks[0] == '2025-W14'
-    assert weeks[-1] == '2025-W26'
+    assert weeks[0] == "2025-W14"
+    assert weeks[-1] == "2025-W26"
 
 
 def test_quarter_to_weeks_q3_boundaries():
     """Q3 starts at W27 and ends at W39."""
-    weeks = quarter_to_weeks('Q3 2024')
+    weeks = quarter_to_weeks("Q3 2024")
     assert len(weeks) == 13
-    assert weeks[0] == '2024-W27'
-    assert weeks[-1] == '2024-W39'
+    assert weeks[0] == "2024-W27"
+    assert weeks[-1] == "2024-W39"
 
 
 # -- quarters_in_range --
 
+
 def test_quarters_in_range_full_year():
     """Q1 2025 to Q4 2025 returns exactly 4 quarters."""
-    result = quarters_in_range('Q1 2025', 'Q4 2025')
+    result = quarters_in_range("Q1 2025", "Q4 2025")
     assert len(result) == 4
-    assert result == ['Q1 2025', 'Q2 2025', 'Q3 2025', 'Q4 2025']
+    assert result == ["Q1 2025", "Q2 2025", "Q3 2025", "Q4 2025"]
 
 
 def test_quarters_in_range_cross_year():
     """Range spanning 2024 and 2025 works correctly."""
-    result = quarters_in_range('Q3 2024', 'Q2 2025')
+    result = quarters_in_range("Q3 2024", "Q2 2025")
     assert len(result) == 4
-    assert result[0] == 'Q3 2024'
-    assert result[-1] == 'Q2 2025'
+    assert result[0] == "Q3 2024"
+    assert result[-1] == "Q2 2025"
 
 
 def test_quarters_in_range_single_quarter():
     """Same start and end returns a single-element list."""
-    result = quarters_in_range('Q2 2025', 'Q2 2025')
-    assert result == ['Q2 2025']
+    result = quarters_in_range("Q2 2025", "Q2 2025")
+    assert result == ["Q2 2025"]
 
 
 def test_quarters_in_range_invalid_returns_empty():
     """Invalid quarter string returns empty list."""
-    result = quarters_in_range('Q1 2030', 'Q4 2030')
+    result = quarters_in_range("Q1 2030", "Q4 2030")
     assert result == []
 
 
 def test_quarters_in_range_all_eight():
     """Full 2024-2025 range returns all 8 quarters."""
-    result = quarters_in_range('Q1 2024', 'Q4 2025')
+    result = quarters_in_range("Q1 2024", "Q4 2025")
     assert len(result) == 8
 
 
 # -- calc_penetration_rate --
 
+
 def test_penetration_rate_in_range():
     """Penetration rate is between 0 and 1 under default parameters."""
     auth = get_auth_matrix()
     scans = get_scan_data()
-    rate = calc_penetration_rate(auth, scans, 'Q4 2025')
+    rate = calc_penetration_rate(auth, scans, "Q4 2025")
     assert 0.0 <= rate <= 1.0
 
 
@@ -101,8 +102,10 @@ def test_penetration_rate_with_retailer_filter():
     auth = get_auth_matrix()
     scans = get_scan_data()
     rate = calc_penetration_rate(
-        auth, scans, 'Q4 2025',
-        retailers=['RET-WALMART'],
+        auth,
+        scans,
+        "Q4 2025",
+        retailers=["RET-WALMART"],
     )
     assert 0.0 <= rate <= 1.0
 
@@ -112,8 +115,10 @@ def test_penetration_rate_empty_auth_returns_zero():
     auth = get_auth_matrix()
     scans = get_scan_data()
     rate = calc_penetration_rate(
-        auth, scans, 'Q4 2025',
-        retailers=['NONEXISTENT-RETAILER'],
+        auth,
+        scans,
+        "Q4 2025",
+        retailers=["NONEXISTENT-RETAILER"],
     )
     assert rate == 0.0
 
@@ -122,21 +127,25 @@ def test_penetration_rate_uses_demo_date():
     """Passing as_of_date=DEMO_AS_OF_DATE produces the same result as default."""
     auth = get_auth_matrix()
     scans = get_scan_data()
-    default_rate = calc_penetration_rate(auth, scans, 'Q4 2025')
+    default_rate = calc_penetration_rate(auth, scans, "Q4 2025")
     explicit_rate = calc_penetration_rate(
-        auth, scans, 'Q4 2025', as_of_date=DEMO_AS_OF_DATE,
+        auth,
+        scans,
+        "Q4 2025",
+        as_of_date=DEMO_AS_OF_DATE,
     )
     assert default_rate == explicit_rate
 
 
 # -- calc_acv_pct --
 
+
 def test_acv_pct_in_range():
     """ACV% is between 0 and 1 under default parameters."""
     stores = get_stores()
     auth = get_auth_matrix()
     scans = get_scan_data()
-    acv = calc_acv_pct(stores, auth, scans, 'Q4 2025')
+    acv = calc_acv_pct(stores, auth, scans, "Q4 2025")
     assert 0.0 <= acv <= 1.0
 
 
@@ -146,8 +155,11 @@ def test_acv_pct_with_product_line_filter():
     auth = get_auth_matrix()
     scans = get_scan_data()
     acv = calc_acv_pct(
-        stores, auth, scans, 'Q4 2025',
-        product_lines=['AS'],
+        stores,
+        auth,
+        scans,
+        "Q4 2025",
+        product_lines=["AS"],
     )
     assert 0.0 <= acv <= 1.0
 
@@ -158,20 +170,24 @@ def test_acv_pct_empty_auth_returns_zero():
     auth = get_auth_matrix()
     scans = get_scan_data()
     acv = calc_acv_pct(
-        stores, auth, scans, 'Q4 2025',
-        retailers=['NONEXISTENT'],
+        stores,
+        auth,
+        scans,
+        "Q4 2025",
+        retailers=["NONEXISTENT"],
     )
     assert acv == 0.0
 
 
 # -- calc_tdp --
 
+
 def test_tdp_positive_value():
     """TDP returns a positive value under default parameters."""
     stores = get_stores()
     auth = get_auth_matrix()
     scans = get_scan_data()
-    tdp = calc_tdp(stores, auth, scans, 'Q4 2025')
+    tdp = calc_tdp(stores, auth, scans, "Q4 2025")
     assert tdp > 0.0
 
 
@@ -181,8 +197,11 @@ def test_tdp_with_single_retailer():
     auth = get_auth_matrix()
     scans = get_scan_data()
     tdp = calc_tdp(
-        stores, auth, scans, 'Q4 2025',
-        retailers=['RET-WALMART'],
+        stores,
+        auth,
+        scans,
+        "Q4 2025",
+        retailers=["RET-WALMART"],
     )
     assert tdp > 0.0
 
@@ -193,13 +212,17 @@ def test_tdp_with_product_line_filter():
     auth = get_auth_matrix()
     scans = get_scan_data()
     tdp = calc_tdp(
-        stores, auth, scans, 'Q4 2025',
-        product_lines=['AS'],
+        stores,
+        auth,
+        scans,
+        "Q4 2025",
+        product_lines=["AS"],
     )
     assert tdp > 0.0
 
 
 # -- calc_period_delta --
+
 
 def test_period_delta_positive():
     """Positive delta when current > prior."""
@@ -228,12 +251,14 @@ def test_period_delta_none_current():
 
 # -- DEMO_AS_OF_DATE consistency --
 
+
 def test_calculations_use_demo_as_of_date():
     """All calculations use DEMO_AS_OF_DATE, not wall-clock time.
 
     Verify by checking that the default parameter matches the canonical value.
     """
-    from app.calculations import DEMO_AS_OF_DATE as calc_date
     from cinderhaven_store_universe.constants import DEMO_AS_OF_DATE as canonical_date
+
+    from app.calculations import DEMO_AS_OF_DATE as calc_date
 
     assert calc_date == canonical_date

@@ -8,7 +8,6 @@ import pytest
 from app.filters import DEFAULT_FILTER_STATE
 from app.views.scorecard import _compute_scorecard_data
 
-
 # ── Shared fixture — compute scorecard data once, reuse across tests ──
 
 _CACHED_DATA = None
@@ -24,44 +23,51 @@ def _get_scorecard_data():
 
 # ── Data dict construction ──
 
+
 class TestPdfDataDict:
     def test_data_has_all_required_keys(self):
         """PDF data dict must have every key the template expects."""
         data = _get_scorecard_data()
         required = {
-            'hero_pct', 'hero_delta', 'retailer_rows', 'product_line_rows',
-            'top_exceptions', 'quarter_label', 'generation_date',
+            "hero_pct",
+            "hero_delta",
+            "retailer_rows",
+            "product_line_rows",
+            "top_exceptions",
+            "quarter_label",
+            "generation_date",
         }
         assert required.issubset(set(data.keys()))
 
     def test_hero_pct_is_float(self):
         data = _get_scorecard_data()
-        assert isinstance(data['hero_pct'], float)
+        assert isinstance(data["hero_pct"], float)
 
     def test_hero_delta_is_float(self):
         data = _get_scorecard_data()
-        assert isinstance(data['hero_delta'], float)
+        assert isinstance(data["hero_delta"], float)
 
     def test_retailer_rows_is_list_of_dicts(self):
         data = _get_scorecard_data()
-        assert isinstance(data['retailer_rows'], list)
-        for row in data['retailer_rows']:
+        assert isinstance(data["retailer_rows"], list)
+        for row in data["retailer_rows"]:
             assert isinstance(row, dict)
 
     def test_product_line_rows_is_list_of_dicts(self):
         data = _get_scorecard_data()
-        assert isinstance(data['product_line_rows'], list)
-        for row in data['product_line_rows']:
+        assert isinstance(data["product_line_rows"], list)
+        for row in data["product_line_rows"]:
             assert isinstance(row, dict)
 
     def test_top_exceptions_is_list_of_dicts(self):
         data = _get_scorecard_data()
-        assert isinstance(data['top_exceptions'], list)
-        for exc in data['top_exceptions']:
+        assert isinstance(data["top_exceptions"], list)
+        for exc in data["top_exceptions"]:
             assert isinstance(exc, dict)
 
 
 # ── Template rendering ──
+
 
 class TestTemplateRendering:
     def test_template_renders_to_valid_html(self):
@@ -72,8 +78,8 @@ class TestTemplateRendering:
         html = render_scorecard_html(data)
         assert isinstance(html, str)
         assert len(html) > 0
-        assert '<!DOCTYPE html>' in html
-        assert '</html>' in html
+        assert "<!DOCTYPE html>" in html
+        assert "</html>" in html
 
     def test_template_contains_quarter_label(self):
         """Rendered HTML should include the quarter label."""
@@ -81,7 +87,7 @@ class TestTemplateRendering:
 
         data = _get_scorecard_data()
         html = render_scorecard_html(data)
-        assert data['quarter_label'] in html
+        assert data["quarter_label"] in html
 
     def test_template_contains_generation_date(self):
         """Rendered HTML should include the generation date."""
@@ -89,7 +95,7 @@ class TestTemplateRendering:
 
         data = _get_scorecard_data()
         html = render_scorecard_html(data)
-        assert data['generation_date'] in html
+        assert data["generation_date"] in html
 
     def test_template_contains_retailer_names(self):
         """Rendered HTML should include all retailer names from the data."""
@@ -97,10 +103,8 @@ class TestTemplateRendering:
 
         data = _get_scorecard_data()
         html = render_scorecard_html(data)
-        for row in data['retailer_rows']:
-            assert row['name'] in html, (
-                f"Retailer '{row['name']}' not found in rendered HTML"
-            )
+        for row in data["retailer_rows"]:
+            assert row["name"] in html, f"Retailer '{row['name']}' not found in rendered HTML"
 
     def test_template_contains_product_line_names(self):
         """Rendered HTML should include all product line names from the data."""
@@ -108,10 +112,8 @@ class TestTemplateRendering:
 
         data = _get_scorecard_data()
         html = render_scorecard_html(data)
-        for row in data['product_line_rows']:
-            assert row['name'] in html, (
-                f"Product line '{row['name']}' not found in rendered HTML"
-            )
+        for row in data["product_line_rows"]:
+            assert row["name"] in html, f"Product line '{row['name']}' not found in rendered HTML"
 
     def test_template_contains_section_headings(self):
         """Rendered HTML should include all three section headings."""
@@ -119,9 +121,9 @@ class TestTemplateRendering:
 
         data = _get_scorecard_data()
         html = render_scorecard_html(data)
-        assert 'Retailer Summary' in html
-        assert 'Product Line Summary' in html
-        assert 'Top Exceptions' in html
+        assert "Retailer Summary" in html
+        assert "Product Line Summary" in html
+        assert "Top Exceptions" in html
 
     def test_template_contains_cinderhaven_branding(self):
         """Rendered HTML should include brand name."""
@@ -129,10 +131,11 @@ class TestTemplateRendering:
 
         data = _get_scorecard_data()
         html = render_scorecard_html(data)
-        assert 'Cinderhaven Provisions' in html
+        assert "Cinderhaven Provisions" in html
 
 
 # ── Color variable usage ──
+
 
 class TestTemplateColors:
     """Verify the template uses Jinja2 color variables, not hardcoded hex."""
@@ -147,53 +150,53 @@ class TestTemplateColors:
 
         template_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            'app', 'templates', 'scorecard.html',
+            "app",
+            "templates",
+            "scorecard.html",
         )
-        with open(template_path, encoding='utf-8') as f:
+        with open(template_path, encoding="utf-8") as f:
             source = f.read()
 
         # These are design-system hex values that must NOT appear as literals
         # in the template — they should be referenced via {{ colors.xxx }}.
         forbidden_literals = [
-            '#0d0d0d',   # INK
-            '#333333',   # TEXT_PRIMARY
-            '#1f2e7a',   # CHICAGO_20
-            '#158f75',   # HK_35
-            '#b82d4a',   # TOKYO_40
+            "#0d0d0d",  # INK
+            "#333333",  # TEXT_PRIMARY
+            "#1f2e7a",  # CHICAGO_20
+            "#158f75",  # HK_35
+            "#b82d4a",  # TOKYO_40
         ]
 
         # Remove all Jinja2 {{ ... }} expressions before checking
-        stripped = re.sub(r'\{\{.*?\}\}', '', source)
+        stripped = re.sub(r"\{\{.*?\}\}", "", source)
 
         for hex_val in forbidden_literals:
-            occurrences = [
-                m for m in re.finditer(re.escape(hex_val), stripped, re.IGNORECASE)
-            ]
+            occurrences = [m for m in re.finditer(re.escape(hex_val), stripped, re.IGNORECASE)]
             assert len(occurrences) == 0, (
-                f"Hardcoded hex {hex_val} found in template (should use "
-                f"{{{{ colors.xxx }}}})"
+                f"Hardcoded hex {hex_val} found in template (should use {{{{ colors.xxx }}}})"
             )
 
 
 # ── WeasyPrint import check ──
 
+
 class TestWeasyPrint:
     @pytest.mark.skipif(
-        sys.platform == 'win32',
-        reason='WeasyPrint requires Linux system libraries (GTK, Pango, etc.)',
+        sys.platform == "win32",
+        reason="WeasyPrint requires Linux system libraries (GTK, Pango, etc.)",
     )
     def test_weasyprint_importable(self):
         """WeasyPrint should be importable on Linux/macOS environments."""
-        wp = pytest.importorskip('weasyprint')
-        assert hasattr(wp, 'HTML')
+        wp = pytest.importorskip("weasyprint")
+        assert hasattr(wp, "HTML")
 
     @pytest.mark.skipif(
-        sys.platform == 'win32',
-        reason='WeasyPrint requires Linux system libraries',
+        sys.platform == "win32",
+        reason="WeasyPrint requires Linux system libraries",
     )
     def test_pdf_generation_produces_bytes(self):
         """Full PDF generation should produce bytes output."""
-        pytest.importorskip('weasyprint')
+        pytest.importorskip("weasyprint")
         from app.pdf import generate_scorecard_pdf
 
         data = _get_scorecard_data()
@@ -201,7 +204,7 @@ class TestWeasyPrint:
         assert isinstance(pdf_bytes, bytes)
         assert len(pdf_bytes) > 0
         # PDF files start with %PDF
-        assert pdf_bytes[:5] == b'%PDF-'
+        assert pdf_bytes[:5] == b"%PDF-"
 
     def test_missing_weasyprint_raises_runtime_error(self):
         """If WeasyPrint is not usable, generate_scorecard_pdf raises RuntimeError.
@@ -213,12 +216,13 @@ class TestWeasyPrint:
         # Check if WeasyPrint is fully functional (not just pip-installed)
         try:
             from weasyprint import HTML  # noqa: F401
-            pytest.skip('WeasyPrint is fully functional; cannot test missing-import path')
+
+            pytest.skip("WeasyPrint is fully functional; cannot test missing-import path")
         except (ImportError, OSError):
             pass
 
         from app.pdf import generate_scorecard_pdf
 
         data = _get_scorecard_data()
-        with pytest.raises(RuntimeError, match='WeasyPrint is not available'):
+        with pytest.raises(RuntimeError, match="WeasyPrint is not available"):
             generate_scorecard_pdf(data)

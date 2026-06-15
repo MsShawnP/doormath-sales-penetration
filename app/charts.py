@@ -1,8 +1,12 @@
 """Shared Economist-style chart defaults and SVG config for Plotly figures."""
 
 from app.constants import (
-    CANVAS, GRIDLINE, INK, TEXT_SECONDARY,
-    FONT_SANS, FONT_SERIF,
+    CANVAS,
+    FONT_SANS,
+    FONT_SERIF,
+    GRIDLINE,
+    INK,
+    TEXT_SECONDARY,
 )
 
 
@@ -41,7 +45,7 @@ def economist_layout(**overrides):
         showlegend=True,
         legend=dict(
             font=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
-            bgcolor='rgba(0,0,0,0)',
+            bgcolor="rgba(0,0,0,0)",
         ),
     )
     defaults.update(overrides)
@@ -50,7 +54,7 @@ def economist_layout(**overrides):
 
 # SVG-based chart config — disable mode bar, render as SVG for print
 CHART_CONFIG = {
-    'displayModeBar': False,
-    'responsive': True,
-    'toImageButtonOptions': {'format': 'svg'},
+    "displayModeBar": False,
+    "responsive": True,
+    "toImageButtonOptions": {"format": "svg"},
 }

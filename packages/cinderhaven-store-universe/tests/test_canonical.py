@@ -3,15 +3,13 @@
 import re
 
 import pandas as pd
-import pytest
-
 from cinderhaven_store_universe import (
     DEMO_AS_OF_DATE,
     get_auth_matrix,
     get_scan_data,
     get_stores,
 )
-from cinderhaven_store_universe.constants import ALL_SKUS, PRODUCT_LINES, RETAILERS
+from cinderhaven_store_universe.constants import ALL_SKUS, PRODUCT_LINES
 
 
 class TestStores:

@@ -43,7 +43,6 @@ def get_auth_matrix() -> pd.DataFrame:
     for i, sku_id in enumerate(ALL_SKUS):
         prefix = _sku_prefix(sku_id)
         start = i * n_stores
-        end = start + n_stores
         for j in range(n_stores):
             ret_id = retailer_ids[start + j]
             auth_probs[start + j] = AUTH_RATES[ret_id][prefix]

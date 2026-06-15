@@ -4,9 +4,9 @@ import dash
 
 app = dash.Dash(
     __name__,
-    assets_folder='../assets',
+    assets_folder="../assets",
     suppress_callback_exceptions=True,
-    title='Door Math — Distribution Penetration',
-    meta_tags=[{'name': 'viewport', 'content': 'width=device-width, initial-scale=1'}],
+    title="Door Math — Distribution Penetration",
+    meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
 )
 server = app.server
