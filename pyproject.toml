@@ -3,6 +3,23 @@ name = "doormath-sales-penetration"
 version = "0.1.0"
 description = "Distribution penetration tracker — door counts, ACV%, TDP trends, and authorization gap analysis for CPG brands"
 requires-python = ">=3.11"
+dependencies = [
+    "dash>=3.0",
+    "plotly>=6.0",
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "dash-ag-grid>=31.0",
+    "gunicorn>=22.0",
+    "python-dotenv>=1.0",
+    "cinderhaven-store-universe",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.4"]
+pdf = ["weasyprint>=68.0,<69.0", "jinja2>=3.1"]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
 
 [tool.ruff]
 line-length = 100
@@ -12,4 +29,4 @@ target-version = "py311"
 select = ["E", "F", "I", "W"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "packages/cinderhaven-store-universe/tests"]
