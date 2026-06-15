@@ -1,0 +1,86 @@
+/* Lailara Design System tokens — Door Math */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Source+Sans+3:wght@400;600;700&display=swap');
+
+:root {
+    /* Canvas & London greyscale */
+    --canvas: #f5f3ee;
+    --text-primary: #333333;
+    --text-secondary: #595959;
+    --gridline: #d9d9d9;
+    --reference: #666666;
+    --disabled: #b3b3b3;
+    --ink: #0d0d0d;
+
+    /* Chicago (accent blue) */
+    --navy: #1f2e7a;
+    --navy-hover: #141e52;
+    --navy-light: #8e9ad0;
+
+    /* Brand red — text and 1px rules only */
+    --red: #cc100a;
+
+    /* Hong Kong sequential teal */
+    --hk-5: #063d32;
+    --hk-15: #0a5c4b;
+    --hk-25: #0e6e5a;
+    --hk-35: #158f75;
+    --hk-45: #1fa282;
+    --hk-55: #35b595;
+    --hk-70: #6dcdb5;
+    --hk-85: #b5e4d8;
+    --hk-95: #e4f5f0;
+
+    /* Singapore (orange) */
+    --sg-20: #7a3d10;
+    --sg-55: #ee8a2a;
+    --sg-70: #f6b97c;
+    --sg-95: #fdeee0;
+
+    /* Tokyo (berry/rose) */
+    --tokyo-20: #7e1f34;
+    --tokyo-40: #b82d4a;
+    --tokyo-70: #e68a9a;
+    --tokyo-95: #fbe9ed;
+
+    /* Semantic status */
+    --pass-bg: #e4f5f0;
+    --pass-text: #0e6e5a;
+    --warn-bg: #fdeee0;
+    --warn-text: #7a3d10;
+    --fail-bg: #fde8e7;
+    --fail-text: #7a0906;
+    --info-bg: #e5e8f5;
+    --info-text: #1f2e7a;
+
+    /* Typography */
+    --font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    --font-sans: 'Source Sans 3', 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+    /* Layout */
+    --content-max-width: 900px;
+    --section-gap: 60px;
+    --border-radius: 2px;
+}
+
+body {
+    background-color: var(--canvas);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 1.6;
+}
+
+h1, h2, h3 {
+    font-family: var(--font-serif);
+    color: var(--ink);
+}
+
+h2 {
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.container-fluid {
+    max-width: var(--content-max-width);
+}
