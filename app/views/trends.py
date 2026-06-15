@@ -17,7 +17,7 @@ from app.calculations import (
     calc_period_delta,
 )
 from app.constants import (
-    TEAL_SEQUENTIAL, REFERENCE, INK, TEXT_SECONDARY,
+    GRIDLINE, TEAL_SEQUENTIAL, REFERENCE, INK, TEXT_SECONDARY,
     FONT_SANS, FONT_SERIF,
     fmt_pct, fmt_delta, fmt_number,
 )
@@ -218,13 +218,13 @@ def _build_acv_chart(acv_data, quarters, selected_point=None):
             xaxis=dict(
                 showgrid=False,
                 showline=True,
-                linecolor='#d9d9d9',
+                linecolor=GRIDLINE,
                 tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
                 title=None,
             ),
             yaxis=dict(
                 showgrid=True,
-                gridcolor='#d9d9d9',
+                gridcolor=GRIDLINE,
                 gridwidth=1,
                 showline=False,
                 tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
@@ -303,13 +303,13 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
             xaxis=dict(
                 showgrid=False,
                 showline=True,
-                linecolor='#d9d9d9',
+                linecolor=GRIDLINE,
                 tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
                 title=None,
             ),
             yaxis=dict(
                 showgrid=True,
-                gridcolor='#d9d9d9',
+                gridcolor=GRIDLINE,
                 gridwidth=1,
                 showline=False,
                 tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),

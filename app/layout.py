@@ -6,6 +6,7 @@ from dash import Input, Output, callback, dcc, html
 
 from app.app import app
 from app import lailara_frame
+from app.constants import CHICAGO_20
 from app.filters import (
     DEFAULT_FILTER_STATE,
     build_empty_state,
@@ -37,7 +38,7 @@ def _build_content_area():
     return dcc.Loading(
         id='tab-content-loading',
         type='default',
-        color='#1f2e7a',
+        color=CHICAGO_20,
         children=html.Div(id='tab-content'),
     )
 

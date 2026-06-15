@@ -16,12 +16,14 @@ from cinderhaven_store_universe.constants import PRODUCT_LINES
 
 from app.components import annotation_callout, dark_callout_card
 from app.constants import (
+    CHICAGO_20,
     FONT_SANS,
     FONT_SERIF,
     INK,
     TEXT_SECONDARY,
     TOKYO_20,
     TOKYO_40,
+    WHITE,
     fmt_number,
 )
 from app.export import export_csv
@@ -334,8 +336,8 @@ def layout():
                         id='ex-download-btn',
                         n_clicks=0,
                         style={
-                            'backgroundColor': '#1f2e7a',
-                            'color': '#ffffff',
+                            'backgroundColor': CHICAGO_20,
+                            'color': WHITE,
                             'border': 'none',
                             'padding': '8px 20px',
                             'borderRadius': '2px',

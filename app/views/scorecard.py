@@ -32,6 +32,7 @@ from app.constants import (
     INK,
     TEXT_SECONDARY,
     TOKYO_40,
+    WHITE,
     TREND_DOWN,
     TREND_UP,
     fmt_number,
@@ -286,7 +287,7 @@ def _build_retailer_table(rows):
 
     body_rows = []
     for i, row in enumerate(rows):
-        bg = CANVAS if i % 2 == 0 else '#ffffff'
+        bg = CANVAS if i % 2 == 0 else WHITE
         delta_color = TREND_UP if row['delta'] > 0 else TREND_DOWN if row['delta'] < 0 else TEXT_SECONDARY
         delta_arrow = '↑' if row['delta'] > 0 else '↓' if row['delta'] < 0 else '→'
         delta_text = f"{delta_arrow} {abs(row['delta']) * 100:.1f} pp"
@@ -332,7 +333,7 @@ def _build_product_line_table(rows):
 
     body_rows = []
     for i, row in enumerate(rows):
-        bg = CANVAS if i % 2 == 0 else '#ffffff'
+        bg = CANVAS if i % 2 == 0 else WHITE
         delta_color = TREND_UP if row['delta'] > 0 else TREND_DOWN if row['delta'] < 0 else TEXT_SECONDARY
         delta_arrow = '↑' if row['delta'] > 0 else '↓' if row['delta'] < 0 else '→'
         delta_text = f"{delta_arrow} {abs(row['delta']) * 100:.1f} pp"
@@ -387,7 +388,7 @@ def _build_exceptions_list(exceptions):
 
     body_rows = []
     for i, exc in enumerate(exceptions):
-        bg = CANVAS if i % 2 == 0 else '#ffffff'
+        bg = CANVAS if i % 2 == 0 else WHITE
         weeks_color = TOKYO_40 if exc['weeks_silent'] > 12 else INK
         body_rows.append(html.Tr([
             html.Td(exc['sku_id'], style=_td_style(bg=bg)),
@@ -427,7 +428,7 @@ def _th_style(align='left'):
     }
 
 
-def _td_style(bg='#ffffff', align='left', color=None):
+def _td_style(bg=WHITE, align='left', color=None):
     """Return inline style dict for table data cells."""
     style = {
         'textAlign': align,
@@ -553,7 +554,7 @@ def layout():
                         n_clicks=0,
                         style={
                             'backgroundColor': CHICAGO_20,
-                            'color': '#ffffff',
+                            'color': WHITE,
                             'border': 'none',
                             'padding': '10px 24px',
                             'borderRadius': '2px',

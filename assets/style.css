@@ -85,7 +85,7 @@
 /* Error banner */
 .error-banner {
     background: var(--ll-red-95);
-    color: #7a0906;
+    color: var(--ll-red-18);
     padding: var(--ll-space-md) var(--ll-space-base);
     border-radius: var(--ll-radius);
     font-family: var(--ll-sans);
@@ -153,7 +153,7 @@
 .dark-callout-subtitle {
     font-family: var(--ll-sans);
     font-size: 14px;
-    color: #d8d8d8;
+    color: var(--ll-card-subtitle);
 }
 
 .dark-callout-row {
@@ -163,7 +163,7 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     font-family: var(--ll-sans);
     font-size: 14px;
-    color: #ededed;
+    color: var(--ll-card-item);
 }
 
 .dark-callout-row:last-child {

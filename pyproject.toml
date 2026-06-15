@@ -11,12 +11,13 @@ dependencies = [
     "dash-ag-grid>=31.0",
     "gunicorn>=22.0",
     "python-dotenv>=1.0",
+    "jinja2>=3.1",
     "cinderhaven-store-universe",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.4"]
-pdf = ["weasyprint>=68.0,<69.0", "jinja2>=3.1"]
+pdf = ["weasyprint>=68.0,<69.0"]
 
 [tool.setuptools.packages.find]
 include = ["app*"]

@@ -11,7 +11,7 @@ from cinderhaven_store_universe import get_stores, get_auth_matrix, get_scan_dat
 from cinderhaven_store_universe.constants import PRODUCT_LINES
 
 from app.constants import (
-    AUTH_BAR, SCAN_BAR, TEAL_SEQUENTIAL,
+    AUTH_BAR, GRIDLINE, SCAN_BAR, TEAL_SEQUENTIAL,
     TREND_UP, TREND_DOWN, INK, TEXT_SECONDARY,
     FONT_SANS, FONT_SERIF,
     fmt_pct, fmt_number,
@@ -324,9 +324,9 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
             title=dict(text='Authorized vs Carrying Doors by Retailer'),
             xaxis=dict(
                 showgrid=True,
-                gridcolor='#d9d9d9',
+                gridcolor=GRIDLINE,
                 showline=True,
-                linecolor='#d9d9d9',
+                linecolor=GRIDLINE,
                 title='Door Count',
                 tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
             ),
@@ -386,9 +386,9 @@ def _build_product_line_chart(pl_data):
             title=dict(text='Carrying Doors by Product Line'),
             xaxis=dict(
                 showgrid=True,
-                gridcolor='#d9d9d9',
+                gridcolor=GRIDLINE,
                 showline=True,
-                linecolor='#d9d9d9',
+                linecolor=GRIDLINE,
                 title='Carrying Doors',
                 tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
             ),

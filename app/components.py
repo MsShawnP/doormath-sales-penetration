@@ -4,7 +4,7 @@ from dash import html
 
 from app.constants import (
     CARD_BG, CARD_TEXT, CARD_SUBTITLE, CARD_MUTED,
-    CARD_BORDER, CARD_ITEM, TEXT_SECONDARY, RED_42,
+    CARD_BORDER, CARD_ITEM, FAIL_BG, TEXT_SECONDARY, RED_42,
 )
 
 
@@ -158,7 +158,7 @@ def error_banner(message, retry_id=None):
             'display': 'flex',
             'alignItems': 'center',
             'padding': '12px 16px',
-            'backgroundColor': '#fde8e7',
+            'backgroundColor': FAIL_BG,
             'borderRadius': '2px',
             'marginBottom': '16px',
         },

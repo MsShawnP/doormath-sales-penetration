@@ -19,6 +19,7 @@ from app.constants import (
     TOKYO_40,
     WARN_BG,
     WARN_TEXT,
+    WHITE,
     FONT_SANS,
     FONT_SERIF,
     DEMO_AS_OF_DATE,
@@ -70,6 +71,7 @@ def generate_scorecard_pdf(data):
             'warn_text': WARN_TEXT,
             'fail_bg': FAIL_BG,
             'fail_text': FAIL_TEXT,
+            'white': WHITE,
         },
         'fonts': {
             'serif': FONT_SERIF,
@@ -118,6 +120,7 @@ def render_scorecard_html(data):
             'warn_text': WARN_TEXT,
             'fail_bg': FAIL_BG,
             'fail_text': FAIL_TEXT,
+            'white': WHITE,
         },
         'fonts': {
             'serif': FONT_SERIF,

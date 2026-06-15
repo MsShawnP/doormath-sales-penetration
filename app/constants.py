@@ -7,6 +7,7 @@ from cinderhaven_store_universe import DEMO_AS_OF_DATE as _DEMO_AS_OF_DATE
 DEMO_AS_OF_DATE = _DEMO_AS_OF_DATE
 
 # ── Canvas & London greyscale ──
+WHITE = '#ffffff'
 CANVAS = '#f5f3ee'
 TEXT_PRIMARY = '#333333'
 TEXT_SECONDARY = '#595959'
