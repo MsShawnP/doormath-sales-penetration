@@ -4,12 +4,6 @@ import json
 
 import dash_ag_grid as dag
 import pandas as pd
-from cinderhaven_store_universe import (
-    DEMO_AS_OF_DATE,
-    get_auth_matrix,
-    get_scan_data,
-    get_stores,
-)
 from cinderhaven_store_universe.constants import PRODUCT_LINES
 from dash import Input, Output, State, callback, dcc, html, no_update
 
@@ -25,23 +19,10 @@ from app.constants import (
     WHITE,
     fmt_number,
 )
+from app.data import AUTH, DEMO_AS_OF_DATE, LAST_SCAN, PL_NAMES, STORES
 from app.export import export_csv
 
-# ── Data loading (cached at module level) ──
-
-_stores = get_stores()
-_auth = get_auth_matrix()
-_scans = get_scan_data()
-
-# Pre-extract product line prefix from sku_id for filtering
-_auth = _auth.copy()
-_auth["product_line"] = _auth["sku_id"].str.split("-").str[1]
-
-_scans = _scans.copy()
-_scans["product_line"] = _scans["sku_id"].str.split("-").str[1]
-
-# Product line name lookup
-_PL_NAMES = {prefix: info["name"] for prefix, info in PRODUCT_LINES.items()}
+_PL_NAMES = PL_NAMES
 
 # Singular names for item name generation
 _PL_SINGULAR = {
@@ -115,10 +96,7 @@ def compute_exceptions(filters):
     product_lines = filters.get("product_lines", [])
     sku = filters.get("sku")
 
-    # Start with authorized pairs
-    auth = _auth[_auth["authorized"]].copy()
-
-    # Apply filters
+    auth = AUTH[AUTH["authorized"]]
     if retailers:
         auth = auth[auth["retailer_id"].isin(retailers)]
     if product_lines:
@@ -131,24 +109,11 @@ def compute_exceptions(filters):
     if total_authorized == 0:
         return [], 0
 
-    # Get scans for authorized pairs only — filter to scanned=True
-    scans = _scans[_scans["scanned"]].copy()
-
-    # Merge to find last scan per authorized pair
     auth_pairs = auth[
         ["sku_id", "store_id", "retailer_id", "product_line", "authorized_date"]
     ].copy()
 
-    # Find last scan week per (sku_id, store_id)
-    last_scans = (
-        scans.groupby(["sku_id", "store_id"])["week"]
-        .max()
-        .reset_index()
-        .rename(columns={"week": "last_scan_week"})
-    )
-
-    # Left join: authorized pairs that never scanned will have NaN
-    merged = auth_pairs.merge(last_scans, on=["sku_id", "store_id"], how="left")
+    merged = auth_pairs.merge(LAST_SCAN, on=["sku_id", "store_id"], how="left")
 
     # Compute weeks silent
     demo_week_idx = _demo_as_of_week_index()
@@ -172,8 +137,7 @@ def compute_exceptions(filters):
     if exceptions.empty:
         return [], total_authorized
 
-    # Enrich with store data
-    store_info = _stores[["store_id", "retailer_name", "region", "volume_tier"]].copy()
+    store_info = STORES[["store_id", "retailer_name", "region", "volume_tier"]].drop_duplicates()
     exceptions = exceptions.merge(store_info, on="store_id", how="left")
 
     # Generate item names and product line names
@@ -402,9 +366,12 @@ def layout():
     Output("ex-annotation", "children"),
     Output("ex-data-store", "data"),
     Input("filter-state", "data"),
+    Input("main-tabs", "value"),
 )
-def _update_exceptions_view(filter_json):
+def _update_exceptions_view(filter_json, active_tab):
     """Recompute exception list when filters change."""
+    if active_tab != "exceptions":
+        return no_update, no_update, no_update, no_update
     filters = json.loads(filter_json) if filter_json else {}
 
     exception_rows, total_authorized = compute_exceptions(filters)

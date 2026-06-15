@@ -30,6 +30,9 @@ credentials.*
 Thumbs.db
 desktop.ini
 
+# Pre-aggregated data cache
+.cache/
+
 # Data artifacts
 *.csv
 *.xlsx

@@ -13,6 +13,7 @@ from app.filters import (
     build_filter_bar,
     register_filter_callbacks,
 )
+from app.views import door_count, exceptions, scorecard, trends
 
 TAB_LABELS = ["Door Count", "Trends", "Exceptions", "Scorecard"]
 TAB_IDS = ["door-count", "trends", "exceptions", "scorecard"]
@@ -81,21 +82,13 @@ def register_layout():
         Input("main-tabs", "value"),
     )
     def _render_tab(tab_value):
-        """Lazily import and render the selected view."""
+        """Render the selected view's layout."""
         if tab_value == "door-count":
-            from app.views.door_count import layout
-
-            return layout()
+            return door_count.layout()
         elif tab_value == "trends":
-            from app.views.trends import layout
-
-            return layout()
+            return trends.layout()
         elif tab_value == "exceptions":
-            from app.views.exceptions import layout
-
-            return layout()
+            return exceptions.layout()
         elif tab_value == "scorecard":
-            from app.views.scorecard import layout
-
-            return layout()
+            return scorecard.layout()
         return html.Div("Unknown tab.")

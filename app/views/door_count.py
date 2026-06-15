@@ -4,10 +4,9 @@ click-to-pin callout cards, and auth gap narrative annotations."""
 import json
 
 import plotly.graph_objects as go
-from cinderhaven_store_universe import get_auth_matrix, get_scan_data, get_stores
-from cinderhaven_store_universe.constants import PRODUCT_LINES
 from dash import Input, Output, State, callback, dcc, html, no_update
 
+from app.calculations import quarters_in_range
 from app.charts import CHART_CONFIG, economist_layout
 from app.components import annotation_callout, dark_callout_card
 from app.constants import (
@@ -21,56 +20,13 @@ from app.constants import (
     TEXT_SECONDARY,
     TREND_DOWN,
     TREND_UP,
+    WHITE,
     fmt_number,
     fmt_pct,
 )
+from app.data import AUTH, PL_NAMES, SCAN_QUARTERLY, STORE_INFO
 
-# ── Data loading (cached at module level) ──
-
-_stores = get_stores()
-_auth = get_auth_matrix()
-_scans = get_scan_data()
-
-# Pre-extract product line prefix from sku_id for filtering
-_auth = _auth.copy()
-_auth["product_line"] = _auth["sku_id"].str.split("-").str[1]
-
-_scans = _scans.copy()
-_scans["product_line"] = _scans["sku_id"].str.split("-").str[1]
-
-# Product line name lookup
-_PL_NAMES = {prefix: info["name"] for prefix, info in PRODUCT_LINES.items()}
-
-
-# ── Quarter / week helpers ──
-
-
-def _quarter_to_weeks(quarter_str):
-    """Convert 'Q1 2025' to a set of week strings like {'2025-W01', ..., '2025-W13'}.
-
-    Q1=W01-W13, Q2=W14-W26, Q3=W27-W39, Q4=W40-W52.
-    """
-    parts = quarter_str.split()
-    q = int(parts[0][1])
-    year = int(parts[1])
-    boundaries = {1: (1, 13), 2: (14, 26), 3: (27, 39), 4: (40, 52)}
-    start_w, end_w = boundaries[q]
-    return {f"{year}-W{w:02d}" for w in range(start_w, end_w + 1)}
-
-
-def _quarter_range_weeks(start_q, end_q):
-    """Return all weeks covered by the quarter range [start_q, end_q]."""
-    all_quarters = [f"Q{q} {y}" for y in [2024, 2025] for q in [1, 2, 3, 4]]
-    # Find indices
-    try:
-        si = all_quarters.index(start_q)
-        ei = all_quarters.index(end_q)
-    except ValueError:
-        return set()
-    weeks = set()
-    for q in all_quarters[si : ei + 1]:
-        weeks |= _quarter_to_weeks(q)
-    return weeks
+# ── Quarter helpers ──
 
 
 def _prior_quarter(quarter_str):
@@ -88,145 +44,102 @@ def _prior_quarter(quarter_str):
 # ── Data computation helpers ──
 
 
-def _filter_data(filters):
-    """Apply filter-state dict to auth and scan DataFrames. Return filtered copies."""
+def _filter_auth(filters):
+    """Filter authorized pairs by filter-state dict."""
     retailers = filters.get("retailers", [])
     product_lines = filters.get("product_lines", [])
     sku = filters.get("sku")
 
-    auth = _auth.copy()
-    scans = _scans.copy()
-
+    auth = AUTH[AUTH["authorized"]]
     if retailers:
         auth = auth[auth["retailer_id"].isin(retailers)]
-        scans = scans[scans["store_id"].isin(auth["store_id"].unique())]
-
     if product_lines:
         auth = auth[auth["product_line"].isin(product_lines)]
-        scans = scans[scans["product_line"].isin(product_lines)]
-
     if sku:
         auth = auth[auth["sku_id"] == sku]
-        scans = scans[scans["sku_id"] == sku]
-
-    return auth, scans
+    return auth
 
 
-def _compute_penetration(auth, scans, weeks):
-    """Compute penetration: carrying_doors / addressable_doors.
+def _carrying_scans(auth, quarters):
+    """Return SCAN_QUARTERLY rows for authorized stores in the given quarters."""
+    store_ids = set(auth["store_id"].unique())
+    sku_ids = set(auth["sku_id"].unique())
+    return SCAN_QUARTERLY[
+        SCAN_QUARTERLY["quarter"].isin(quarters)
+        & SCAN_QUARTERLY["store_id"].isin(store_ids)
+        & SCAN_QUARTERLY["sku_id"].isin(sku_ids)
+    ]
 
-    addressable_doors: unique stores with at least one authorized item.
-    carrying_doors: addressable stores that scanned at least once in the given weeks.
-    """
-    auth_only = auth[auth["authorized"]]
-    addressable_stores = set(auth_only["store_id"].unique())
 
-    if not addressable_stores or not weeks:
-        return 0.0, 0, len(addressable_stores)
+def _compute_penetration(auth, quarters):
+    """Compute penetration: carrying_doors / addressable_doors."""
+    addressable_stores = auth["store_id"].unique()
+    if len(addressable_stores) == 0 or not quarters:
+        return 0.0, 0, 0
 
-    # Scans in the specified weeks for authorized item-store pairs
-    auth_pairs = set(zip(auth_only["sku_id"], auth_only["store_id"]))
-    period_scans = scans[scans["week"].isin(weeks) & scans["scanned"]]
-    scan_pairs = set(zip(period_scans["sku_id"], period_scans["store_id"]))
-    # Intersect with authorized pairs
-    carrying_pairs = auth_pairs & scan_pairs
-    carrying_stores = {pair[1] for pair in carrying_pairs}
-    carrying_doors = len(carrying_stores & addressable_stores)
+    sq = _carrying_scans(auth, quarters)
+    carrying_doors = sq["store_id"].nunique()
     addressable = len(addressable_stores)
-
-    pct = carrying_doors / addressable if addressable > 0 else 0.0
+    pct = carrying_doors / addressable
     return pct, carrying_doors, addressable
 
 
-def _compute_retailer_bars(auth, scans, weeks):
-    """Compute per-retailer authorized vs carrying door counts.
-
-    Returns a list of dicts: retailer_name, authorized_doors, carrying_doors, pct.
-    """
-    auth_only = auth[auth["authorized"]]
-    retailers = auth_only[["retailer_id", "store_id"]].drop_duplicates()
-
-    # Map retailer_id to name via stores
-    ret_names = _stores[["retailer_id", "retailer_name"]].drop_duplicates()
-    retailers = retailers.merge(ret_names, on="retailer_id", how="left")
-
-    # Authorized doors per retailer
+def _compute_retailer_bars(auth, quarters):
+    """Compute per-retailer authorized vs carrying door counts."""
+    ret_names = STORE_INFO[["store_id", "retailer_name"]].drop_duplicates()
+    auth_ret = auth.merge(ret_names, on="store_id", how="left")
     auth_by_ret = (
-        retailers.groupby(["retailer_id", "retailer_name"])["store_id"].nunique().reset_index()
+        auth_ret.groupby(["retailer_id", "retailer_name"])["store_id"].nunique().reset_index()
     )
     auth_by_ret.columns = ["retailer_id", "retailer_name", "authorized_doors"]
 
-    # Carrying doors per retailer
-    period_scans = scans[scans["week"].isin(weeks) & scans["scanned"]]
-    # Only count scans for authorized pairs
-    auth_pairs = auth_only[["sku_id", "store_id", "retailer_id"]].drop_duplicates()
-    carrying = period_scans.merge(auth_pairs, on=["sku_id", "store_id"], how="inner")
-    carry_by_ret = carrying.groupby("retailer_id")["store_id"].nunique().reset_index()
+    sq = _carrying_scans(auth, quarters)
+    carry_by_ret = sq.groupby("retailer_id")["store_id"].nunique().reset_index()
     carry_by_ret.columns = ["retailer_id", "carrying_doors"]
 
     result = auth_by_ret.merge(carry_by_ret, on="retailer_id", how="left")
     result["carrying_doors"] = result["carrying_doors"].fillna(0).astype(int)
     result["pct"] = result["carrying_doors"] / result["authorized_doors"]
     result = result.sort_values("authorized_doors", ascending=True)
-
     return result.to_dict("records")
 
 
-def _compute_product_line_bars(auth, scans, weeks):
-    """Compute per-product-line carrying doors broken down by retailer.
-
-    Returns a dict: {product_line_name: {retailer_name: carrying_doors}}.
-    """
-    auth_only = auth[auth["authorized"]]
-    period_scans = scans[scans["week"].isin(weeks) & scans["scanned"]]
-
-    # Join auth and scans to identify carrying
-    auth_pairs = auth_only[["sku_id", "store_id", "retailer_id", "product_line"]].drop_duplicates()
-    # Drop product_line from scans before merge to avoid suffixed duplicates
-    scan_cols = period_scans[["sku_id", "store_id"]].drop_duplicates()
-    carrying = scan_cols.merge(auth_pairs, on=["sku_id", "store_id"], how="inner")
-
-    if carrying.empty:
+def _compute_product_line_bars(auth, quarters):
+    """Compute per-product-line carrying doors broken down by retailer."""
+    sq = _carrying_scans(auth, quarters)
+    if sq.empty:
         return {}
 
-    ret_names = _stores[["retailer_id", "retailer_name"]].drop_duplicates()
-    carrying = carrying.merge(ret_names, on="retailer_id", how="left")
-
-    # Count unique carrying doors per product line per retailer
+    sq_named = sq.merge(
+        STORE_INFO[["store_id", "retailer_name"]].drop_duplicates(),
+        on="store_id",
+        how="left",
+    )
     grouped = (
-        carrying.groupby(["product_line", "retailer_name"])["store_id"].nunique().reset_index()
+        sq_named.groupby(["product_line", "retailer_name"])["store_id"].nunique().reset_index()
     )
     grouped.columns = ["product_line", "retailer_name", "carrying_doors"]
 
     result = {}
     for _, row in grouped.iterrows():
-        pl_name = _PL_NAMES.get(row["product_line"], row["product_line"])
+        pl_name = PL_NAMES.get(row["product_line"], row["product_line"])
         if pl_name not in result:
             result[pl_name] = {}
         result[pl_name][row["retailer_name"]] = int(row["carrying_doors"])
-
     return result
 
 
-def _compute_auth_gaps(auth, scans, weeks):
-    """Find retailers where the auth gap exceeds 15% of authorized doors.
-
-    Returns list of annotation strings.
-    """
-    auth_only = auth[auth["authorized"]]
-    retailers = auth_only[["retailer_id", "store_id"]].drop_duplicates()
-    ret_names = _stores[["retailer_id", "retailer_name"]].drop_duplicates()
-    retailers = retailers.merge(ret_names, on="retailer_id", how="left")
-
+def _compute_auth_gaps(auth, quarters):
+    """Find retailers where the auth gap exceeds 15% of authorized doors."""
+    ret_names = STORE_INFO[["store_id", "retailer_name"]].drop_duplicates()
+    auth_ret = auth.merge(ret_names, on="store_id", how="left")
     auth_by_ret = (
-        retailers.groupby(["retailer_id", "retailer_name"])["store_id"].nunique().reset_index()
+        auth_ret.groupby(["retailer_id", "retailer_name"])["store_id"].nunique().reset_index()
     )
     auth_by_ret.columns = ["retailer_id", "retailer_name", "authorized_doors"]
 
-    period_scans = scans[scans["week"].isin(weeks) & scans["scanned"]]
-    auth_pairs = auth_only[["sku_id", "store_id", "retailer_id"]].drop_duplicates()
-    carrying = period_scans.merge(auth_pairs, on=["sku_id", "store_id"], how="inner")
-    carry_by_ret = carrying.groupby("retailer_id")["store_id"].nunique().reset_index()
+    sq = _carrying_scans(auth, quarters)
+    carry_by_ret = sq.groupby("retailer_id")["store_id"].nunique().reset_index()
     carry_by_ret.columns = ["retailer_id", "carrying_doors"]
 
     merged = auth_by_ret.merge(carry_by_ret, on="retailer_id", how="left")
@@ -234,40 +147,31 @@ def _compute_auth_gaps(auth, scans, weeks):
     merged["gap"] = merged["authorized_doors"] - merged["carrying_doors"]
     merged["gap_pct"] = merged["gap"] / merged["authorized_doors"]
 
-    # Compute weeks of silence — how many weeks since last scan in the period
     annotations = []
     for _, row in merged[merged["gap_pct"] > 0.15].iterrows():
         gap = int(row["gap"])
         auth_doors = int(row["authorized_doors"])
         name = row["retailer_name"]
-        # Approximate weeks since last scan: use the total weeks in the period
-        n_weeks = len(weeks)
         annotations.append(
             f"{name}: {gap} of {auth_doors} authorized stores haven't scanned "
-            f"in {n_weeks}+ weeks — the shelf says no even though the "
-            f"retailer said yes."
+            f"recently — the shelf says no even though the retailer said yes."
         )
-
     return annotations
 
 
-def _compute_click_detail(auth, scans, weeks, retailer_name):
+def _compute_click_detail(auth, quarters, retailer_name):
     """Compute detail card data for a clicked retailer."""
-    ret_id_row = _stores[_stores["retailer_name"] == retailer_name].iloc[0]
-    ret_id = ret_id_row["retailer_id"]
+    ret_row = STORE_INFO[STORE_INFO["retailer_name"] == retailer_name].iloc[0]
+    ret_id = ret_row["retailer_id"]
 
-    ret_auth = auth[(auth["retailer_id"] == ret_id) & auth["authorized"]]
+    ret_auth = auth[auth["retailer_id"] == ret_id]
     addressable = ret_auth["store_id"].nunique()
 
-    auth_pairs = set(zip(ret_auth["sku_id"], ret_auth["store_id"]))
-    period_scans = scans[scans["week"].isin(weeks) & scans["scanned"]]
-    scan_pairs = set(zip(period_scans["sku_id"], period_scans["store_id"]))
-    carrying_pairs = auth_pairs & scan_pairs
-    carrying_doors = len({p[1] for p in carrying_pairs})
+    sq = _carrying_scans(ret_auth, quarters)
+    carrying_doors = sq["store_id"].nunique()
 
     items_auth = ret_auth["sku_id"].nunique()
-    carrying_items_set = {p[0] for p in carrying_pairs}
-    items_carried = len(carrying_items_set)
+    items_carried = sq["sku_id"].nunique()
     items_not_carried = items_auth - items_carried
 
     pct = carrying_doors / addressable if addressable > 0 else 0.0
@@ -291,7 +195,6 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
     auth_counts = [d["authorized_doors"] for d in bar_data]
     carry_counts = [d["carrying_doors"] for d in bar_data]
 
-    # Opacity per bar: dim non-selected when a retailer is pinned
     auth_opacity = []
     carry_opacity = []
     for d in bar_data:
@@ -371,7 +274,6 @@ def _build_product_line_chart(pl_data):
         return go.Figure()
 
     product_lines = sorted(pl_data.keys())
-    # Collect all retailer names across product lines
     all_retailers = set()
     for ret_data in pl_data.values():
         all_retailers.update(ret_data.keys())
@@ -391,7 +293,7 @@ def _build_product_line_chart(pl_data):
                 marker=dict(color=color),
                 text=[fmt_number(v) if v > 0 else "" for v in values],
                 textposition="inside",
-                textfont=dict(family=FONT_SANS, size=11, color="white"),
+                textfont=dict(family=FONT_SANS, size=11, color=WHITE),
                 hoverinfo="skip",
             )
         )
@@ -436,7 +338,6 @@ def layout():
     """Return the Door Count view component tree."""
     return html.Div(
         [
-            # Hero metric
             html.Div(
                 [
                     html.Div(
@@ -475,7 +376,6 @@ def layout():
                     "marginBottom": "24px",
                 },
             ),
-            # Retailer bar chart
             html.Div(
                 dcc.Graph(
                     id="dc-retailer-chart",
@@ -483,11 +383,8 @@ def layout():
                 ),
                 **{"aria-label": "Authorized versus carrying doors by retailer"},
             ),
-            # Click-to-pin callout card area
             html.Div(id="dc-callout-area"),
-            # Auth gap annotations
             html.Div(id="dc-auth-gap-annotations"),
-            # Product line stacked bar chart
             html.Div(
                 dcc.Graph(
                     id="dc-product-line-chart",
@@ -496,7 +393,6 @@ def layout():
                 style={"marginTop": "40px"},
                 **{"aria-label": "Carrying doors by product line and retailer"},
             ),
-            # Hidden store for tracking the pinned retailer
             dcc.Store(id="dc-pinned-retailer", data=None),
         ],
     )
@@ -513,31 +409,28 @@ def layout():
     Output("dc-product-line-chart", "figure"),
     Output("dc-auth-gap-annotations", "children"),
     Input("filter-state", "data"),
+    Input("main-tabs", "value"),
 )
-def _update_door_count_view(filter_json):
+def _update_door_count_view(filter_json, active_tab):
     """Recompute all door count view elements when filters change."""
+    if active_tab != "door-count":
+        return no_update, no_update, no_update, no_update, no_update, no_update
     filters = json.loads(filter_json) if filter_json else {}
 
     end_q = filters.get("end_quarter", "Q4 2025")
     start_q = filters.get("start_quarter", "Q1 2025")
-
-    # Determine weeks for the end quarter (current) and prior quarter
-    current_weeks = _quarter_to_weeks(end_q)
     prior_q = _prior_quarter(end_q)
-    prior_weeks = _quarter_to_weeks(prior_q) if prior_q else set()
+    range_quarters = quarters_in_range(start_q, end_q)
 
-    # Full range weeks for the bar charts
-    range_weeks = _quarter_range_weeks(start_q, end_q)
-
-    auth, scans = _filter_data(filters)
+    auth = _filter_auth(filters)
 
     # Hero metric — based on end quarter only
-    current_pct, carrying, addressable = _compute_penetration(auth, scans, current_weeks)
+    current_pct, carrying, addressable = _compute_penetration(auth, [end_q])
     hero_text = fmt_pct(current_pct, 1)
 
     # Trend vs prior quarter
-    if prior_weeks:
-        prior_pct, _, _ = _compute_penetration(auth, scans, prior_weeks)
+    if prior_q:
+        prior_pct, _, _ = _compute_penetration(auth, [prior_q])
         delta = current_pct - prior_pct
         if delta > 0:
             trend_text = f"↑ {abs(delta) * 100:.1f} pp from prior quarter"
@@ -567,16 +460,16 @@ def _update_door_count_view(filter_json):
         trend_text = ""
         trend_style = {"display": "none"}
 
-    # Retailer bar chart — uses full range
-    bar_data = _compute_retailer_bars(auth, scans, range_weeks)
+    # Retailer bar chart — full range
+    bar_data = _compute_retailer_bars(auth, range_quarters)
     retailer_fig = _build_retailer_chart(bar_data)
 
-    # Product line chart — uses full range
-    pl_data = _compute_product_line_bars(auth, scans, range_weeks)
+    # Product line chart — full range
+    pl_data = _compute_product_line_bars(auth, range_quarters)
     pl_fig = _build_product_line_chart(pl_data)
 
     # Auth gap annotations — based on end quarter
-    gap_texts = _compute_auth_gaps(auth, scans, current_weeks)
+    gap_texts = _compute_auth_gaps(auth, [end_q])
     gap_children = [annotation_callout(t) for t in gap_texts] if gap_texts else []
 
     return hero_text, trend_text, trend_style, retailer_fig, pl_fig, gap_children
@@ -601,7 +494,6 @@ def _toggle_pinned_retailer(click_data, current_pinned):
     if not clicked_retailer:
         return no_update
 
-    # Toggle: click same retailer to dismiss
     if current_pinned == clicked_retailer:
         return None
     return clicked_retailer
@@ -619,19 +511,16 @@ def _update_callout_and_dim(pinned_retailer, filter_json):
     filters = json.loads(filter_json) if filter_json else {}
     end_q = filters.get("end_quarter", "Q4 2025")
     start_q = filters.get("start_quarter", "Q1 2025")
-    range_weeks = _quarter_range_weeks(start_q, end_q)
+    range_quarters = quarters_in_range(start_q, end_q)
 
-    auth, scans = _filter_data(filters)
-    bar_data = _compute_retailer_bars(auth, scans, range_weeks)
+    auth = _filter_auth(filters)
+    bar_data = _compute_retailer_bars(auth, range_quarters)
 
     if not pinned_retailer:
-        # Clear callout, reset opacity
         fig = _build_retailer_chart(bar_data, selected_retailer=None)
         return [], fig
 
-    # Build callout card
-    current_weeks = _quarter_to_weeks(end_q)
-    detail = _compute_click_detail(auth, scans, current_weeks, pinned_retailer)
+    detail = _compute_click_detail(auth, [end_q], pinned_retailer)
 
     card = dark_callout_card(
         title=detail["retailer_name"],
@@ -643,7 +532,5 @@ def _update_callout_and_dim(pinned_retailer, filter_json):
         ],
     )
 
-    # Rebuild chart with dimming
     fig = _build_retailer_chart(bar_data, selected_retailer=pinned_retailer)
-
     return card, fig

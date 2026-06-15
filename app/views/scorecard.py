@@ -7,7 +7,6 @@ generation via ``app.pdf``.
 
 import json
 
-from cinderhaven_store_universe import get_auth_matrix, get_scan_data, get_stores
 from cinderhaven_store_universe.constants import PRODUCT_LINES, RETAILERS
 from dash import Input, Output, State, callback, dcc, html, no_update
 
@@ -16,7 +15,8 @@ from app.calculations import (
     calc_penetration_rate,
     calc_period_delta,
     calc_tdp,
-    quarter_to_weeks,
+    carrying_in_quarter,
+    filter_auth,
 )
 from app.components import annotation_callout, error_banner
 from app.constants import (
@@ -34,19 +34,11 @@ from app.constants import (
     fmt_number,
     fmt_pct,
 )
+from app.data import AUTH, DEMO_AS_OF_DATE, PL_NAMES, RETAILER_NAMES, SCAN_QUARTERLY
 from app.views.exceptions import compute_exceptions, sku_to_item_name
 
-# ── Data loading (cached at module level) ──
-
-_stores = get_stores()
-_auth = get_auth_matrix()
-_scans = get_scan_data()
-
-# Retailer name lookup
-_RET_NAMES = {ret_id: info["name"] for ret_id, info in RETAILERS.items()}
-
-# Product line name lookup
-_PL_NAMES = {prefix: info["name"] for prefix, info in PRODUCT_LINES.items()}
+_RET_NAMES = RETAILER_NAMES
+_PL_NAMES = PL_NAMES
 _PL_PREFIXES = list(PRODUCT_LINES.keys())
 
 
@@ -83,8 +75,6 @@ def _compute_scorecard_data(filters):
 
     # ── Hero metric ──
     hero_pct = calc_penetration_rate(
-        _auth,
-        _scans,
         end_q,
         retailers=retailers or None,
         product_lines=product_lines or None,
@@ -92,8 +82,6 @@ def _compute_scorecard_data(filters):
     )
     if prior_q:
         prior_pct = calc_penetration_rate(
-            _auth,
-            _scans,
             prior_q,
             retailers=retailers or None,
             product_lines=product_lines or None,
@@ -111,57 +99,38 @@ def _compute_scorecard_data(filters):
         ret_filter = [ret_id]
 
         pen = calc_penetration_rate(
-            _auth,
-            _scans,
             end_q,
             retailers=ret_filter,
             product_lines=product_lines or None,
             sku=sku,
         )
         acv = calc_acv_pct(
-            _stores,
-            _auth,
-            _scans,
             end_q,
             retailers=ret_filter,
             product_lines=product_lines or None,
             sku=sku,
         )
         tdp = calc_tdp(
-            _stores,
-            _auth,
-            _scans,
             end_q,
             retailers=ret_filter,
             product_lines=product_lines or None,
         )
 
-        # Compute carrying / addressable counts
-        auth_filtered = _auth[_auth["authorized"] & _auth["retailer_id"].isin(ret_filter)]
-        if product_lines:
-            auth_filtered = auth_filtered[
-                auth_filtered["sku_id"].str.split("-").str[1].isin(product_lines)
-            ]
-        if sku:
-            auth_filtered = auth_filtered[auth_filtered["sku_id"] == sku]
+        auth_filtered = filter_auth(
+            retailers=ret_filter,
+            product_lines=product_lines or None,
+            sku=sku,
+        )
         addressable = auth_filtered["store_id"].nunique()
+        sq = carrying_in_quarter(
+            end_q,
+            set(auth_filtered["store_id"].unique()),
+            set(auth_filtered["sku_id"].unique()),
+        )
+        carrying = sq["store_id"].nunique()
 
-        weeks = quarter_to_weeks(end_q)
-        auth_store_ids = auth_filtered["store_id"].unique()
-        auth_sku_ids = auth_filtered["sku_id"].unique()
-        quarter_scans = _scans[
-            (_scans["week"].isin(weeks))
-            & _scans["scanned"]
-            & _scans["store_id"].isin(auth_store_ids)
-            & _scans["sku_id"].isin(auth_sku_ids)
-        ]
-        carrying = quarter_scans["store_id"].nunique()
-
-        # Prior quarter delta
         if prior_q:
             prior_pen = calc_penetration_rate(
-                _auth,
-                _scans,
                 prior_q,
                 retailers=ret_filter,
                 product_lines=product_lines or None,
@@ -194,48 +163,33 @@ def _compute_scorecard_data(filters):
         pl_filter = [pl_prefix]
 
         pen = calc_penetration_rate(
-            _auth,
-            _scans,
             end_q,
             retailers=retailers or None,
             product_lines=pl_filter,
             sku=sku,
         )
         acv = calc_acv_pct(
-            _stores,
-            _auth,
-            _scans,
             end_q,
             retailers=retailers or None,
             product_lines=pl_filter,
             sku=sku,
         )
 
-        # Carrying / addressable for this product line
-        auth_filtered = _auth[_auth["authorized"]].copy()
-        if retailers:
-            auth_filtered = auth_filtered[auth_filtered["retailer_id"].isin(retailers)]
-        auth_filtered = auth_filtered[auth_filtered["sku_id"].str.split("-").str[1].isin(pl_filter)]
-        if sku:
-            auth_filtered = auth_filtered[auth_filtered["sku_id"] == sku]
+        auth_filtered = filter_auth(
+            retailers=retailers or None,
+            product_lines=pl_filter,
+            sku=sku,
+        )
         addressable = auth_filtered["store_id"].nunique()
+        sq = carrying_in_quarter(
+            end_q,
+            set(auth_filtered["store_id"].unique()),
+            set(auth_filtered["sku_id"].unique()),
+        )
+        carrying = sq["store_id"].nunique()
 
-        weeks = quarter_to_weeks(end_q)
-        auth_store_ids = auth_filtered["store_id"].unique()
-        auth_sku_ids = auth_filtered["sku_id"].unique()
-        quarter_scans = _scans[
-            (_scans["week"].isin(weeks))
-            & _scans["scanned"]
-            & _scans["store_id"].isin(auth_store_ids)
-            & _scans["sku_id"].isin(auth_sku_ids)
-        ]
-        carrying = quarter_scans["store_id"].nunique()
-
-        # Prior quarter delta
         if prior_q:
             prior_pen = calc_penetration_rate(
-                _auth,
-                _scans,
                 prior_q,
                 retailers=retailers or None,
                 product_lines=pl_filter,
@@ -271,8 +225,6 @@ def _compute_scorecard_data(filters):
                 "weeks_silent": row.get("weeks_silent", 0),
             }
         )
-
-    from app.constants import DEMO_AS_OF_DATE
 
     generation_date = DEMO_AS_OF_DATE.strftime("%Y-%m-%d")
 
@@ -627,9 +579,12 @@ def layout():
     Output("sc-exceptions-list", "children"),
     Output("sc-annotation", "children"),
     Input("filter-state", "data"),
+    Input("main-tabs", "value"),
 )
-def _update_scorecard(filter_json):
+def _update_scorecard(filter_json, active_tab):
     """Recompute all scorecard elements when filters change."""
+    if active_tab != "scorecard":
+        return no_update, no_update, no_update, no_update, no_update, no_update, no_update
     filters = json.loads(filter_json) if filter_json else {}
     data = _compute_scorecard_data(filters)
 

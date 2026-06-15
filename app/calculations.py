@@ -1,10 +1,10 @@
 """Centralized metric calculations for Door Math.
 
-All time-relative computations use an explicit as_of_date parameter
-defaulting to DEMO_AS_OF_DATE -- never wall-clock time.
+Uses pre-aggregated quarterly scan data from app.data for performance.
+All time-relative computations use DEMO_AS_OF_DATE -- never wall-clock time.
 """
 
-from app.constants import DEMO_AS_OF_DATE
+from app.data import AUTH, SCAN_QUARTERLY, STORE_INFO
 
 
 def quarter_to_weeks(quarter_str):
@@ -34,57 +34,44 @@ def quarters_in_range(start_quarter, end_quarter):
     return all_quarters[start_idx : end_idx + 1]
 
 
-def calc_penetration_rate(
-    auth_df, scan_df, quarter, retailers=None, product_lines=None, sku=None, as_of_date=None
-):
+def filter_auth(retailers=None, product_lines=None, sku=None):
+    """Return authorized pairs filtered by retailer, product line, and/or SKU."""
+    auth = AUTH[AUTH["authorized"]]
+    if retailers:
+        auth = auth[auth["retailer_id"].isin(retailers)]
+    if product_lines:
+        auth = auth[auth["product_line"].isin(product_lines)]
+    if sku:
+        auth = auth[auth["sku_id"] == sku]
+    return auth
+
+
+def carrying_in_quarter(quarter, auth_store_ids, auth_sku_ids=None):
+    """Return SCAN_QUARTERLY rows for carrying stores in the given quarter."""
+    mask = (SCAN_QUARTERLY["quarter"] == quarter) & SCAN_QUARTERLY["store_id"].isin(auth_store_ids)
+    if auth_sku_ids is not None:
+        mask = mask & SCAN_QUARTERLY["sku_id"].isin(auth_sku_ids)
+    return SCAN_QUARTERLY[mask]
+
+
+def calc_penetration_rate(quarter, retailers=None, product_lines=None, sku=None):
     """Calculate penetration rate: carrying doors / addressable doors for a quarter.
 
     Addressable = unique stores with at least one authorized item matching filters.
     Carrying = addressable stores that scanned at least once in the quarter.
     Returns float between 0 and 1.
     """
-    if as_of_date is None:
-        as_of_date = DEMO_AS_OF_DATE
-
-    # Filter auth matrix to authorized items only
-    auth = auth_df[auth_df["authorized"]].copy()
-    if retailers:
-        auth = auth[auth["retailer_id"].isin(retailers)]
-    if product_lines:
-        auth = auth[auth["sku_id"].str.split("-").str[1].isin(product_lines)]
-    if sku:
-        auth = auth[auth["sku_id"] == sku]
-
-    # Addressable = unique stores with at least one authorized item
-    addressable_stores = auth["store_id"].unique()
-    if len(addressable_stores) == 0:
+    auth = filter_auth(retailers, product_lines, sku)
+    addressable_ids = set(auth["store_id"].unique())
+    if not addressable_ids:
         return 0.0
 
-    # Carrying = stores that scanned at least once in the quarter
-    # for at least one of the authorized SKUs matching the filter
-    weeks = quarter_to_weeks(quarter)
-    auth_sku_ids = auth["sku_id"].unique()
-    quarter_scans = scan_df[
-        (scan_df["week"].isin(weeks))
-        & (scan_df["scanned"])
-        & (scan_df["store_id"].isin(addressable_stores))
-        & (scan_df["sku_id"].isin(auth_sku_ids))
-    ]
-
-    carrying_stores = quarter_scans["store_id"].nunique()
-    return carrying_stores / len(addressable_stores)
+    sq = carrying_in_quarter(quarter, addressable_ids, set(auth["sku_id"].unique()))
+    carrying = sq["store_id"].nunique()
+    return carrying / len(addressable_ids)
 
 
-def calc_acv_pct(
-    stores_df,
-    auth_df,
-    scan_df,
-    quarter,
-    retailers=None,
-    product_lines=None,
-    sku=None,
-    as_of_date=None,
-):
+def calc_acv_pct(quarter, retailers=None, product_lines=None, sku=None):
     """Calculate ACV% -- weighted distribution by store volume tier.
 
     ACV% = sum of volume weights for carrying stores / sum of volume weights
@@ -92,74 +79,45 @@ def calc_acv_pct(
     for actual ACV dollars).
     Returns float between 0 and 1.
     """
-    if as_of_date is None:
-        as_of_date = DEMO_AS_OF_DATE
-
-    TIER_WEIGHTS = {"A": 3, "B": 2, "C": 1}
-
-    # Get authorized stores
-    auth = auth_df[auth_df["authorized"]].copy()
-    if retailers:
-        auth = auth[auth["retailer_id"].isin(retailers)]
-    if product_lines:
-        auth = auth[auth["sku_id"].str.split("-").str[1].isin(product_lines)]
-    if sku:
-        auth = auth[auth["sku_id"] == sku]
-
-    addressable_store_ids = auth["store_id"].unique()
-    if len(addressable_store_ids) == 0:
+    auth = filter_auth(retailers, product_lines, sku)
+    addressable_ids = set(auth["store_id"].unique())
+    if not addressable_ids:
         return 0.0
 
-    addressable = stores_df[stores_df["store_id"].isin(addressable_store_ids)]
-    total_weight = addressable["volume_tier"].map(TIER_WEIGHTS).sum()
+    total_weight = STORE_INFO.loc[STORE_INFO["store_id"].isin(addressable_ids), "weight"].sum()
     if total_weight == 0:
         return 0.0
 
-    # Carrying stores -- scanned at least once in the quarter
-    weeks = quarter_to_weeks(quarter)
-    quarter_scans = scan_df[
-        (scan_df["week"].isin(weeks))
-        & (scan_df["scanned"])
-        & (scan_df["store_id"].isin(addressable_store_ids))
-    ]
-    carrying_store_ids = quarter_scans["store_id"].unique()
-    carrying = stores_df[stores_df["store_id"].isin(carrying_store_ids)]
-    carrying_weight = carrying["volume_tier"].map(TIER_WEIGHTS).sum()
+    auth_sku_ids = set(auth["sku_id"].unique())
+    sq = carrying_in_quarter(quarter, addressable_ids, auth_sku_ids)
+    carrying_ids = set(sq["store_id"].unique())
+    carrying_weight = STORE_INFO.loc[STORE_INFO["store_id"].isin(carrying_ids), "weight"].sum()
 
     return carrying_weight / total_weight
 
 
-def calc_tdp(
-    stores_df, auth_df, scan_df, quarter, retailers=None, product_lines=None, as_of_date=None
-):
+def calc_tdp(quarter, retailers=None, product_lines=None):
     """Calculate TDP (Total Distribution Points) -- sum of ACV% across items.
 
-    TDP = sum over all SKUs of (ACV% for that SKU in the quarter).
+    Vectorized: computes per-SKU ACV% in a single groupby instead of looping.
     Returns a float (total points, not bounded by 1).
     """
-    if as_of_date is None:
-        as_of_date = DEMO_AS_OF_DATE
+    auth = filter_auth(retailers, product_lines)
+    addressable_ids = set(auth["store_id"].unique())
+    if not addressable_ids:
+        return 0.0
 
-    auth = auth_df[auth_df["authorized"]].copy()
-    if retailers:
-        auth = auth[auth["retailer_id"].isin(retailers)]
-    if product_lines:
-        auth = auth[auth["sku_id"].str.split("-").str[1].isin(product_lines)]
+    total_weight = STORE_INFO.loc[STORE_INFO["store_id"].isin(addressable_ids), "weight"].sum()
+    if total_weight == 0:
+        return 0.0
 
-    skus = auth["sku_id"].unique()
-    total = 0.0
-    for sku in skus:
-        total += calc_acv_pct(
-            stores_df,
-            auth_df,
-            scan_df,
-            quarter,
-            retailers=retailers,
-            product_lines=product_lines,
-            sku=sku,
-            as_of_date=as_of_date,
-        )
-    return total
+    auth_sku_ids = set(auth["sku_id"].unique())
+    sq = carrying_in_quarter(quarter, addressable_ids, auth_sku_ids)
+
+    per_sku = (
+        sq.drop_duplicates(subset=["sku_id", "store_id"]).groupby("sku_id")["weight"].sum()
+    )
+    return per_sku.sum() / total_weight
 
 
 def calc_period_delta(current_value, prior_value):

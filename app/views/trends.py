@@ -4,13 +4,6 @@ import json
 import statistics
 
 import plotly.graph_objects as go
-from cinderhaven_store_universe import (
-    get_auth_matrix,
-    get_scan_data,
-    get_slow_leak_config,
-    get_stores,
-)
-from cinderhaven_store_universe.constants import RETAILERS
 from dash import Input, Output, State, callback, dcc, html, no_update
 
 from app.calculations import (
@@ -18,6 +11,7 @@ from app.calculations import (
     calc_penetration_rate,
     calc_period_delta,
     calc_tdp,
+    filter_auth,
     quarters_in_range,
 )
 from app.charts import CHART_CONFIG, economist_layout
@@ -32,17 +26,10 @@ from app.constants import (
     fmt_delta,
     fmt_pct,
 )
+from app.data import AUTH, RETAILER_NAMES, SLOW_LEAK
 
-# -- Data loading (cached at module level) --
-
-_stores = get_stores()
-_auth = get_auth_matrix()
-_scans = get_scan_data()
-_slow_leak = get_slow_leak_config()
-
-# Retailer ID-to-name lookup
-_RETAILER_NAMES = {ret_id: info["name"] for ret_id, info in RETAILERS.items()}
-_RETAILER_IDS_SORTED = sorted(RETAILERS.keys())
+_RETAILER_NAMES = RETAILER_NAMES
+_RETAILER_IDS_SORTED = sorted(RETAILER_NAMES.keys())
 
 # Assign one teal color per retailer, evenly spaced across the 8-shade palette.
 # 6 retailers, 8 teal shades -- pick indices [0, 1, 2, 4, 5, 7] for contrast.
@@ -72,9 +59,6 @@ def _compute_acv_by_retailer(filters, quarters):
         result[ret_id] = {}
         for q in quarters:
             result[ret_id][q] = calc_acv_pct(
-                _stores,
-                _auth,
-                _scans,
                 q,
                 retailers=[ret_id],
                 product_lines=product_lines if product_lines else None,
@@ -96,9 +80,6 @@ def _compute_tdp_by_retailer(filters, quarters):
         result[ret_id] = {}
         for q in quarters:
             result[ret_id][q] = calc_tdp(
-                _stores,
-                _auth,
-                _scans,
                 q,
                 retailers=[ret_id],
                 product_lines=product_lines if product_lines else None,
@@ -117,7 +98,7 @@ def _compute_slow_leak_annotations(filters, quarters):
 
     annotations = []
 
-    for sku_id, config in _slow_leak.items():
+    for sku_id, config in SLOW_LEAK.items():
         # Extract product line prefix from sku_id (e.g. CHP-DG-003 -> DG)
         sku_prefix = sku_id.split("-")[1]
 
@@ -132,8 +113,6 @@ def _compute_slow_leak_annotations(filters, quarters):
         penetration_by_q = {}
         for q in quarters:
             penetration_by_q[q] = calc_penetration_rate(
-                _auth,
-                _scans,
                 q,
                 retailers=retailers if retailers else None,
                 product_lines=[sku_prefix],
@@ -158,7 +137,7 @@ def _compute_slow_leak_annotations(filters, quarters):
                 n_quarters = 0
 
             # Estimate doors lost: use addressable stores for this SKU
-            auth_for_sku = _auth[(_auth["authorized"]) & (_auth["sku_id"] == sku_id)]
+            auth_for_sku = AUTH[(AUTH["authorized"]) & (AUTH["sku_id"] == sku_id)]
             if retailers:
                 auth_for_sku = auth_for_sku[auth_for_sku["retailer_id"].isin(retailers)]
             addressable = auth_for_sku["store_id"].nunique()
@@ -406,9 +385,12 @@ def layout():
     Output("tr-tdp-chart", "figure"),
     Output("tr-slow-leak-annotations", "children"),
     Input("filter-state", "data"),
+    Input("main-tabs", "value"),
 )
-def _update_trends_charts(filter_json):
+def _update_trends_charts(filter_json, active_tab):
     """Recompute ACV% and TDP charts when filters change."""
+    if active_tab != "trends":
+        return no_update, no_update, no_update
     filters = json.loads(filter_json) if filter_json else {}
 
     start_q = filters.get("start_quarter", "Q1 2025")
