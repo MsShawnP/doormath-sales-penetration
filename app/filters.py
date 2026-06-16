@@ -15,6 +15,12 @@ PRODUCT_LINE_OPTIONS = [
 ]
 ALL_PRODUCT_LINE_PREFIXES = [opt["value"] for opt in PRODUCT_LINE_OPTIONS]
 
+SKU_OPTIONS = [
+    {"label": SKU_NAMES.get(sku, sku), "value": sku}
+    for info in PRODUCT_LINES.values()
+    for sku in info["skus"]
+]
+
 # ── Quarter options: Q1 2024 through Q4 2025 (8 quarters) ──
 QUARTER_OPTIONS = [
     {"label": f"Q{q} {y}", "value": f"Q{q} {y}"} for y in [2024, 2025] for q in [1, 2, 3, 4]
@@ -82,7 +88,7 @@ def build_filter_bar():
                     html.Label("SKU (optional)"),
                     dcc.Dropdown(
                         id="filter-sku",
-                        options=[],
+                        options=SKU_OPTIONS,
                         value=None,
                         multi=False,
                         placeholder="All SKUs",
@@ -92,7 +98,7 @@ def build_filter_bar():
                 ],
                 id="filter-sku-group",
                 className="filter-group",
-                style={"minWidth": "180px", "flex": "1", "display": "none"},
+                style={"minWidth": "180px", "flex": "1"},
             ),
             html.Div(
                 [
@@ -151,11 +157,10 @@ def register_filter_callbacks():
         State("filter-sku", "value"),
     )
     def _update_sku_visibility(product_lines, current_sku):
-        """Show SKU dropdown only when exactly 1 product line is selected."""
-        if product_lines and len(product_lines) == 1:
+        """Update SKU dropdown options based on selected product lines."""
+        if product_lines:
             options = _sku_options_for_lines(product_lines)
             sku_ids = [o["value"] for o in options]
-            # Keep current selection if it still belongs to the selected product line
             kept_sku = current_sku if current_sku in sku_ids else None
             return (
                 {
@@ -168,7 +173,6 @@ def register_filter_callbacks():
                 options,
                 kept_sku,
             )
-        # Hide and reset
         return (
             {"minWidth": "180px", "flex": "1", "display": "none"},
             [],
