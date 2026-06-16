@@ -115,12 +115,24 @@ Visual polish in progress. 3 of 6 identified bugs fixed, 2 remaining before rede
 
 **Committed:** `3bbc2c4` on main.
 
+### Session 11 — Polish round (2026-06-16)
+
+**Started from:** Rounds 3+4 complete. Two polish items: gap chart label collisions, scorecard repetitive retailer list.
+
+**Did:**
+- Fixed gap chart label collisions — `textposition="outside"` when gap segment < 15% of chart x-range, `cliponaxis=False`, right margin 20→100px
+- Fixed scorecard Top Exceptions — "All retailers" when SKU appears at every retailer, individual names for proper subsets
+- Made wsgi.py read PORT from env for preview server compatibility
+- Committed, pushed, deployed to Fly.io
+
+**State:** App deployed. All visual polish items resolved. 122 tests pass, ruff clean. No known bugs.
+
+**Next:** Run `/ce:review` (code review ensemble), then `/ce:compound` to extract learnings.
+
 ## What's next
 
 1. Run `/ce:review` — code review ensemble
-2. Redeploy to Fly.io with Round 3+4 changes
-3. If user provides Round 5 feedback, address it
-4. Run `/ce:compound` to extract learnings
+2. Run `/ce:compound` to extract learnings
 
 ## Key files
 

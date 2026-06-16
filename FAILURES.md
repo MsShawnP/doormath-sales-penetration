@@ -14,5 +14,8 @@ First implementation of `_dodge_overlapping()` sorted cluster members by their v
 **Re-exporting SKU_NAMES through app/data.py flagged by ruff F401.**
 Tried to centralize all data imports through `app/data.py` by re-exporting `SKU_NAMES` there. Ruff flagged it as an unused import (F401) because `app/data.py` itself doesn't use the symbol — it only re-exports it. The `__all__` workaround would have been artificial. Fix: consumers import `SKU_NAMES` directly from `cinderhaven_store_universe.constants`, matching the existing pattern in `filters.py`. Lesson: don't force a "single hub" import pattern when the linter enforces used-only imports; follow the existing convention instead.
 
+**Preview screenshot timeout on Plotly-heavy Dash pages.**
+`preview_screenshot` timed out at 30s repeatedly on the Door Count tab (2 Plotly charts with stacked bars and text annotations). The page was fully loaded and interactive — `preview_eval` and `preview_snapshot` both worked. Workaround: verify chart behavior via `preview_eval` (inspect `chart.data` for `textposition` arrays) and `preview_snapshot` (accessibility tree for rendered text). Lesson: for Plotly-heavy Dash apps, don't rely on preview screenshots for verification — DOM inspection is faster and more reliable.
+
 **pandas merge column collision (retailer_id).**
 `door_count.py` merged AUTH (which has `retailer_id`) with STORE_INFO (also has `retailer_id`) on `store_id`. pandas silently renamed to `retailer_id_x` / `retailer_id_y`. The subsequent `groupby(["retailer_id", ...])` threw KeyError. Fix: only merge `retailer_name` from STORE_INFO since AUTH already has `retailer_id`. Lesson: when merging DataFrames that share column names beyond the join key, be explicit about which columns to pull.
