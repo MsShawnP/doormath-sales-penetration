@@ -22,12 +22,12 @@ def test_trends_layout_has_chart_ids():
     from app.views.trends import layout
 
     result = layout()
-    chart_row = result.children[0]  # first child is the flex row
-    assert len(chart_row.children) == 2  # two side-by-side charts
+    # Charts are in separate wrapper Divs (children[0] = ACV, children[1] = TDP)
+    acv_wrapper = result.children[0]
+    tdp_wrapper = result.children[1]
 
-    # Each chart wrapper contains a dcc.Graph
-    acv_graph = chart_row.children[0].children
-    tdp_graph = chart_row.children[1].children
+    acv_graph = acv_wrapper.children
+    tdp_graph = tdp_wrapper.children
     assert acv_graph.id == "tr-acv-chart"
     assert tdp_graph.id == "tr-tdp-chart"
 
@@ -37,11 +37,8 @@ def test_trends_layout_has_aria_labels():
     from app.views.trends import layout
 
     result = layout()
-    chart_row = result.children[0]
-    # Check aria-label is set on the wrapper divs
-    acv_wrapper = chart_row.children[0]
-    tdp_wrapper = chart_row.children[1]
-    # Dash stores aria-* in the component's kwargs
+    acv_wrapper = result.children[0]
+    tdp_wrapper = result.children[1]
     assert "ACV" in str(acv_wrapper)
     assert "TDP" in str(tdp_wrapper)
 

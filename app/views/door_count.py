@@ -4,6 +4,7 @@ click-to-pin callout cards, and auth gap narrative annotations."""
 import json
 
 import plotly.graph_objects as go
+from cinderhaven_store_universe.constants import SKU_NAMES
 from dash import Input, Output, State, callback, dcc, html, no_update
 
 from app.calculations import quarters_in_range
@@ -353,6 +354,7 @@ def layout():
                     ),
                     html.P(
                         "of addressable doors carrying at least one Cinderhaven item",
+                        id="dc-hero-subtitle",
                         style={
                             "fontFamily": FONT_SANS,
                             "fontSize": "17px",
@@ -403,6 +405,7 @@ def layout():
 
 @callback(
     Output("dc-hero-pct", "children"),
+    Output("dc-hero-subtitle", "children"),
     Output("dc-hero-trend", "children"),
     Output("dc-hero-trend", "style"),
     Output("dc-retailer-chart", "figure"),
@@ -414,7 +417,7 @@ def layout():
 def _update_door_count_view(filter_json, active_tab):
     """Recompute all door count view elements when filters change."""
     if active_tab != "door-count":
-        return no_update, no_update, no_update, no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update, no_update, no_update, no_update
     filters = json.loads(filter_json) if filter_json else {}
 
     end_q = filters.get("end_quarter", "Q4 2025")
@@ -427,6 +430,14 @@ def _update_door_count_view(filter_json, active_tab):
     # Hero metric — based on end quarter only
     current_pct, carrying, addressable = _compute_penetration(auth, [end_q])
     hero_text = fmt_pct(current_pct, 1)
+
+    # Dynamic subtitle based on SKU filter
+    sku = filters.get("sku")
+    if sku:
+        sku_label = SKU_NAMES.get(sku, sku)
+        subtitle = f"of addressable doors carrying {sku_label}"
+    else:
+        subtitle = "of addressable doors carrying at least one Cinderhaven item"
 
     # Trend vs prior quarter
     if prior_q:
@@ -472,7 +483,7 @@ def _update_door_count_view(filter_json, active_tab):
     gap_texts = _compute_auth_gaps(auth, [end_q])
     gap_children = [annotation_callout(t) for t in gap_texts] if gap_texts else []
 
-    return hero_text, trend_text, trend_style, retailer_fig, pl_fig, gap_children
+    return hero_text, subtitle, trend_text, trend_style, retailer_fig, pl_fig, gap_children
 
 
 @callback(

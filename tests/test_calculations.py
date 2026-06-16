@@ -1,8 +1,6 @@
 """Tests for the centralized calculations module."""
 
 import pytest
-from cinderhaven_store_universe import get_auth_matrix, get_scan_data, get_stores
-from cinderhaven_store_universe.constants import DEMO_AS_OF_DATE
 
 from app.calculations import (
     calc_acv_pct,
@@ -91,50 +89,27 @@ def test_quarters_in_range_all_eight():
 
 def test_penetration_rate_in_range():
     """Penetration rate is between 0 and 1 under default parameters."""
-    auth = get_auth_matrix()
-    scans = get_scan_data()
-    rate = calc_penetration_rate(auth, scans, "Q4 2025")
+    rate = calc_penetration_rate("Q4 2025")
     assert 0.0 <= rate <= 1.0
 
 
 def test_penetration_rate_with_retailer_filter():
     """Penetration rate works with a retailer filter applied."""
-    auth = get_auth_matrix()
-    scans = get_scan_data()
-    rate = calc_penetration_rate(
-        auth,
-        scans,
-        "Q4 2025",
-        retailers=["RET-WALMART"],
-    )
+    rate = calc_penetration_rate("Q4 2025", retailers=["RET-WALMART"])
     assert 0.0 <= rate <= 1.0
 
 
 def test_penetration_rate_empty_auth_returns_zero():
     """If no authorized items match, penetration is 0."""
-    auth = get_auth_matrix()
-    scans = get_scan_data()
-    rate = calc_penetration_rate(
-        auth,
-        scans,
-        "Q4 2025",
-        retailers=["NONEXISTENT-RETAILER"],
-    )
+    rate = calc_penetration_rate("Q4 2025", retailers=["NONEXISTENT-RETAILER"])
     assert rate == 0.0
 
 
-def test_penetration_rate_uses_demo_date():
-    """Passing as_of_date=DEMO_AS_OF_DATE produces the same result as default."""
-    auth = get_auth_matrix()
-    scans = get_scan_data()
-    default_rate = calc_penetration_rate(auth, scans, "Q4 2025")
-    explicit_rate = calc_penetration_rate(
-        auth,
-        scans,
-        "Q4 2025",
-        as_of_date=DEMO_AS_OF_DATE,
-    )
-    assert default_rate == explicit_rate
+def test_penetration_rate_consistent():
+    """Calling twice with same params returns same result (deterministic data)."""
+    rate1 = calc_penetration_rate("Q4 2025")
+    rate2 = calc_penetration_rate("Q4 2025")
+    assert rate1 == rate2
 
 
 # -- calc_acv_pct --
@@ -142,40 +117,19 @@ def test_penetration_rate_uses_demo_date():
 
 def test_acv_pct_in_range():
     """ACV% is between 0 and 1 under default parameters."""
-    stores = get_stores()
-    auth = get_auth_matrix()
-    scans = get_scan_data()
-    acv = calc_acv_pct(stores, auth, scans, "Q4 2025")
+    acv = calc_acv_pct("Q4 2025")
     assert 0.0 <= acv <= 1.0
 
 
 def test_acv_pct_with_product_line_filter():
     """ACV% works when filtered to a single product line."""
-    stores = get_stores()
-    auth = get_auth_matrix()
-    scans = get_scan_data()
-    acv = calc_acv_pct(
-        stores,
-        auth,
-        scans,
-        "Q4 2025",
-        product_lines=["AS"],
-    )
+    acv = calc_acv_pct("Q4 2025", product_lines=["AS"])
     assert 0.0 <= acv <= 1.0
 
 
 def test_acv_pct_empty_auth_returns_zero():
     """ACV% is 0 when no authorized items match."""
-    stores = get_stores()
-    auth = get_auth_matrix()
-    scans = get_scan_data()
-    acv = calc_acv_pct(
-        stores,
-        auth,
-        scans,
-        "Q4 2025",
-        retailers=["NONEXISTENT"],
-    )
+    acv = calc_acv_pct("Q4 2025", retailers=["NONEXISTENT"])
     assert acv == 0.0
 
 
@@ -184,40 +138,19 @@ def test_acv_pct_empty_auth_returns_zero():
 
 def test_tdp_positive_value():
     """TDP returns a positive value under default parameters."""
-    stores = get_stores()
-    auth = get_auth_matrix()
-    scans = get_scan_data()
-    tdp = calc_tdp(stores, auth, scans, "Q4 2025")
+    tdp = calc_tdp("Q4 2025")
     assert tdp > 0.0
 
 
 def test_tdp_with_single_retailer():
     """TDP works when filtered to a single retailer."""
-    stores = get_stores()
-    auth = get_auth_matrix()
-    scans = get_scan_data()
-    tdp = calc_tdp(
-        stores,
-        auth,
-        scans,
-        "Q4 2025",
-        retailers=["RET-WALMART"],
-    )
+    tdp = calc_tdp("Q4 2025", retailers=["RET-WALMART"])
     assert tdp > 0.0
 
 
 def test_tdp_with_product_line_filter():
     """TDP works with product line filter."""
-    stores = get_stores()
-    auth = get_auth_matrix()
-    scans = get_scan_data()
-    tdp = calc_tdp(
-        stores,
-        auth,
-        scans,
-        "Q4 2025",
-        product_lines=["AS"],
-    )
+    tdp = calc_tdp("Q4 2025", product_lines=["AS"])
     assert tdp > 0.0
 
 
@@ -253,12 +186,8 @@ def test_period_delta_none_current():
 
 
 def test_calculations_use_demo_as_of_date():
-    """All calculations use DEMO_AS_OF_DATE, not wall-clock time.
-
-    Verify by checking that the default parameter matches the canonical value.
-    """
+    """The data layer uses DEMO_AS_OF_DATE, not wall-clock time."""
+    import pandas as pd
     from cinderhaven_store_universe.constants import DEMO_AS_OF_DATE as canonical_date
 
-    from app.calculations import DEMO_AS_OF_DATE as calc_date
-
-    assert calc_date == canonical_date
+    assert canonical_date == pd.Timestamp("2025-12-29")

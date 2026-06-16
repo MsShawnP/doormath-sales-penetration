@@ -44,8 +44,9 @@ def economist_layout(**overrides):
         dragmode=False,
         showlegend=True,
         legend=dict(
-            font=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
+            font=dict(family=FONT_SANS, size=11, color=TEXT_SECONDARY),
             bgcolor="rgba(0,0,0,0)",
+            itemwidth=30,
         ),
     )
     defaults.update(overrides)

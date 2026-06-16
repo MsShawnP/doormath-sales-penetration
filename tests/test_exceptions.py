@@ -14,13 +14,13 @@ from app.views.exceptions import (
 
 class TestSkuHelpers:
     def test_sku_to_item_name_artisan_sauce(self):
-        assert sku_to_item_name("CHP-AS-001") == "Artisan Sauce #1"
+        assert sku_to_item_name("CHP-AS-001") == "Roasted Garlic Marinara"
 
     def test_sku_to_item_name_dried_goods(self):
-        assert sku_to_item_name("CHP-DG-003") == "Dried Good #3"
+        assert sku_to_item_name("CHP-DG-003") == "Spiced Lentil Soup Mix"
 
     def test_sku_to_item_name_snack_bites(self):
-        assert sku_to_item_name("CHP-SB-010") == "Snack Bite #10"
+        assert sku_to_item_name("CHP-SB-010") == "Honey Chili Pistachios"
 
     def test_sku_to_product_line(self):
         assert sku_to_product_line("CHP-AS-001") == "Artisan Sauces"

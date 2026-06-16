@@ -112,16 +112,15 @@ def test_door_count_layout_renders():
 
 def test_hero_metric_valid_percentage():
     """Hero metric computes a valid penetration percentage between 0 and 100%."""
-    from app.filters import DEFAULT_FILTER_STATE
-    from app.views.door_count import (
-        _compute_penetration,
-        _filter_data,
-        _quarter_to_weeks,
-    )
+    from app.views.door_count import _compute_penetration, _filter_auth
 
-    auth, scans = _filter_data(DEFAULT_FILTER_STATE)
-    weeks = _quarter_to_weeks("Q4 2025")
-    pct, carrying, addressable = _compute_penetration(auth, scans, weeks)
+    filters = {
+        "retailers": [],
+        "product_lines": [],
+        "sku": None,
+    }
+    auth = _filter_auth(filters)
+    pct, carrying, addressable = _compute_penetration(auth, ["Q4 2025"])
 
     assert 0.0 <= pct <= 1.0, f"Penetration {pct} out of [0, 1] range"
     assert carrying >= 0
@@ -131,16 +130,17 @@ def test_hero_metric_valid_percentage():
 
 def test_retailer_bar_chart_has_correct_groups():
     """Retailer bar chart data has one group per active retailer."""
-    from app.filters import DEFAULT_FILTER_STATE
-    from app.views.door_count import (
-        _compute_retailer_bars,
-        _filter_data,
-        _quarter_range_weeks,
-    )
+    from app.calculations import quarters_in_range
+    from app.views.door_count import _compute_retailer_bars, _filter_auth
 
-    auth, scans = _filter_data(DEFAULT_FILTER_STATE)
-    weeks = _quarter_range_weeks("Q1 2025", "Q4 2025")
-    bar_data = _compute_retailer_bars(auth, scans, weeks)
+    filters = {
+        "retailers": [],
+        "product_lines": [],
+        "sku": None,
+    }
+    auth = _filter_auth(filters)
+    quarters = quarters_in_range("Q1 2025", "Q4 2025")
+    bar_data = _compute_retailer_bars(auth, quarters)
 
     # Default filters include all 6 retailers
     assert len(bar_data) == 6
@@ -153,15 +153,15 @@ def test_retailer_bar_chart_has_correct_groups():
 
 def test_quarter_to_weeks():
     """Quarter-to-week mapping produces 13 weeks per quarter."""
-    from app.views.door_count import _quarter_to_weeks
+    from app.calculations import quarter_to_weeks
 
-    q1 = _quarter_to_weeks("Q1 2025")
+    q1 = quarter_to_weeks("Q1 2025")
     assert len(q1) == 13
     assert "2025-W01" in q1
     assert "2025-W13" in q1
     assert "2025-W14" not in q1
 
-    q4 = _quarter_to_weeks("Q4 2025")
+    q4 = quarter_to_weeks("Q4 2025")
     assert len(q4) == 13
     assert "2025-W40" in q4
     assert "2025-W52" in q4
@@ -178,16 +178,17 @@ def test_prior_quarter():
 
 def test_product_line_chart_data():
     """Product line chart data includes all 5 product lines under default filters."""
-    from app.filters import DEFAULT_FILTER_STATE
-    from app.views.door_count import (
-        _compute_product_line_bars,
-        _filter_data,
-        _quarter_range_weeks,
-    )
+    from app.calculations import quarters_in_range
+    from app.views.door_count import _compute_product_line_bars, _filter_auth
 
-    auth, scans = _filter_data(DEFAULT_FILTER_STATE)
-    weeks = _quarter_range_weeks("Q1 2025", "Q4 2025")
-    pl_data = _compute_product_line_bars(auth, scans, weeks)
+    filters = {
+        "retailers": [],
+        "product_lines": [],
+        "sku": None,
+    }
+    auth = _filter_auth(filters)
+    quarters = quarters_in_range("Q1 2025", "Q4 2025")
+    pl_data = _compute_product_line_bars(auth, quarters)
 
     # 5 product lines
     assert len(pl_data) == 5
@@ -195,18 +196,17 @@ def test_product_line_chart_data():
 
 def test_auth_gap_annotations_are_computed():
     """Auth gap annotations produce at least one annotation under default filters."""
-    from app.filters import DEFAULT_FILTER_STATE
-    from app.views.door_count import (
-        _compute_auth_gaps,
-        _filter_data,
-        _quarter_to_weeks,
-    )
+    from app.views.door_count import _compute_auth_gaps, _filter_auth
 
-    auth, scans = _filter_data(DEFAULT_FILTER_STATE)
-    weeks = _quarter_to_weeks("Q4 2025")
-    annotations = _compute_auth_gaps(auth, scans, weeks)
+    filters = {
+        "retailers": [],
+        "product_lines": [],
+        "sku": None,
+    }
+    auth = _filter_auth(filters)
+    annotations = _compute_auth_gaps(auth, ["Q4 2025"])
 
-    # With random data, some retailers should have a gap > 15%
+    # With data gaps, some retailers should have a gap > 15%
     assert isinstance(annotations, list)
     for a in annotations:
         assert "authorized stores" in a
