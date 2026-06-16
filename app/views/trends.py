@@ -8,10 +8,10 @@ from cinderhaven_store_universe.constants import SKU_NAMES
 from dash import Input, Output, State, callback, dcc, html, no_update
 
 from app.calculations import (
-    calc_acv_pct,
+    batch_acv_by_retailer,
+    batch_tdp_by_retailer,
     calc_penetration_rate,
     calc_period_delta,
-    calc_tdp,
     quarters_in_range,
 )
 from app.charts import CHART_CONFIG, economist_layout
@@ -40,50 +40,40 @@ for i, ret_id in enumerate(_RETAILER_IDS_SORTED):
     )
     RETAILER_COLORS[ret_id] = TEAL_SEQUENTIAL[idx]
 
+_LINE_DASHES = ["solid", "dash", "dot", "dashdot", "longdash", "longdashdot"]
+_MARKER_SYMBOLS = ["circle", "square", "diamond", "triangle-up", "cross", "star"]
+RETAILER_LINE_STYLES = {}
+RETAILER_MARKERS = {}
+for i, ret_id in enumerate(_RETAILER_IDS_SORTED):
+    RETAILER_LINE_STYLES[ret_id] = _LINE_DASHES[i % len(_LINE_DASHES)]
+    RETAILER_MARKERS[ret_id] = _MARKER_SYMBOLS[i % len(_MARKER_SYMBOLS)]
+
 
 # -- Computation helpers --
 
 
 def _compute_acv_by_retailer(filters, quarters):
-    """Compute ACV% per retailer per quarter.
-
-    Returns dict: {retailer_id: {quarter_str: acv_pct_float}}.
-    """
+    """Compute ACV% per retailer per quarter in a single batch pass."""
     retailers = filters.get("retailers", [])
     product_lines = filters.get("product_lines", [])
     sku = filters.get("sku")
-
-    result = {}
-    for ret_id in retailers:
-        result[ret_id] = {}
-        for q in quarters:
-            result[ret_id][q] = calc_acv_pct(
-                q,
-                retailers=[ret_id],
-                product_lines=product_lines if product_lines else None,
-                sku=sku,
-            )
-    return result
+    return batch_acv_by_retailer(
+        quarters,
+        retailers,
+        product_lines=product_lines if product_lines else None,
+        sku=sku,
+    )
 
 
 def _compute_tdp_by_retailer(filters, quarters):
-    """Compute TDP per retailer per quarter.
-
-    Returns dict: {retailer_id: {quarter_str: tdp_float}}.
-    """
+    """Compute TDP per retailer per quarter in a single batch pass."""
     retailers = filters.get("retailers", [])
     product_lines = filters.get("product_lines", [])
-
-    result = {}
-    for ret_id in retailers:
-        result[ret_id] = {}
-        for q in quarters:
-            result[ret_id][q] = calc_tdp(
-                q,
-                retailers=[ret_id],
-                product_lines=product_lines if product_lines else None,
-            )
-    return result
+    return batch_tdp_by_retailer(
+        quarters,
+        retailers,
+        product_lines=product_lines if product_lines else None,
+    )
 
 
 def _compute_slow_leak_annotations(filters, quarters):
@@ -156,27 +146,46 @@ def _compute_slow_leak_annotations(filters, quarters):
 # -- Chart builders --
 
 
+def _auto_y_range(all_values, suffix_pct=False):
+    """Compute a Y-axis range with ~10% padding around the data extremes."""
+    if not all_values:
+        return None
+    data_min = min(all_values)
+    data_max = max(all_values)
+    span = data_max - data_min
+    padding = max(span * 0.15, 2.0)
+    y_min = max(0, data_min - padding)
+    y_max = data_max + padding
+    if suffix_pct:
+        y_max = min(100, y_max)
+    return [round(y_min, 1), round(y_max, 1)]
+
+
 def _build_acv_chart(acv_data, quarters, selected_point=None):
     """Build ACV% trend line chart with one line per retailer plus a median reference.
 
-    Args:
-        acv_data: {retailer_id: {quarter: acv_pct}}.
-        quarters: Ordered list of quarter strings.
-        selected_point: Optional dict with 'retailer_id' and 'quarter' for dimming.
+    Each retailer gets a unique color, line dash, and marker symbol so all 6
+    lines are visually distinguishable even when values cluster tightly.
+    Y-axis auto-scales to the data range instead of starting at 0%.
     """
     fig = go.Figure()
+
+    # Collect all values for auto-range
+    all_pct_values = []
 
     # Compute median ACV% across retailers per quarter
     medians = []
     for q in quarters:
         vals = [acv_data[r][q] for r in acv_data if q in acv_data[r]]
-        medians.append(statistics.median(vals) if vals else 0.0)
+        med = statistics.median(vals) if vals else 0.0
+        medians.append(med)
+    median_pcts = [v * 100 for v in medians]
+    all_pct_values.extend(median_pcts)
 
-    # Add median reference line
     fig.add_trace(
         go.Scatter(
             x=quarters,
-            y=[v * 100 for v in medians],
+            y=median_pcts,
             mode="lines",
             name="Median",
             line=dict(color=REFERENCE, dash="dash", width=2),
@@ -184,13 +193,15 @@ def _build_acv_chart(acv_data, quarters, selected_point=None):
         )
     )
 
-    # Add one line per retailer
     for ret_id in sorted(acv_data.keys()):
         color = RETAILER_COLORS.get(ret_id, TEAL_SEQUENTIAL[0])
+        dash = RETAILER_LINE_STYLES.get(ret_id, "solid")
+        symbol = RETAILER_MARKERS.get(ret_id, "circle")
         name = _RETAILER_NAMES.get(ret_id, ret_id)
         values = [acv_data[ret_id].get(q, 0.0) for q in quarters]
+        pct_values = [v * 100 for v in values]
+        all_pct_values.extend(pct_values)
 
-        # Dim non-selected retailers when a point is pinned
         opacity = 1.0
         if selected_point and selected_point.get("retailer_id") != ret_id:
             opacity = 0.25
@@ -198,15 +209,17 @@ def _build_acv_chart(acv_data, quarters, selected_point=None):
         fig.add_trace(
             go.Scatter(
                 x=quarters,
-                y=[v * 100 for v in values],
+                y=pct_values,
                 mode="lines+markers",
                 name=name,
-                line=dict(color=color, width=2.5),
-                marker=dict(color=color, size=7),
+                line=dict(color=color, width=2.5, dash=dash),
+                marker=dict(color=color, size=8, symbol=symbol),
                 opacity=opacity,
                 customdata=[ret_id] * len(quarters),
             )
         )
+
+    y_range = _auto_y_range(all_pct_values, suffix_pct=True)
 
     fig.update_layout(
         **economist_layout(
@@ -225,17 +238,20 @@ def _build_acv_chart(acv_data, quarters, selected_point=None):
                 showline=False,
                 tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
                 ticksuffix="%",
-                rangemode="tozero",
+                range=y_range,
                 title=None,
             ),
             legend=dict(
                 orientation="h",
-                yanchor="bottom",
-                y=1.02,
+                yanchor="top",
+                y=-0.15,
                 xanchor="left",
                 x=0,
+                font=dict(family=FONT_SANS, size=12),
+                entrywidthmode="fraction",
+                entrywidth=0.14,
             ),
-            height=420,
+            height=480,
         )
     )
 
@@ -287,26 +303,26 @@ def _dodge_overlapping(tdp_data, quarters, threshold=1.0, min_gap=1.0):
 def _build_tdp_chart(tdp_data, quarters, selected_point=None):
     """Build TDP trend line chart with one line per retailer plus a median reference.
 
-    Args:
-        tdp_data: {retailer_id: {quarter: tdp_value}}.
-        quarters: Ordered list of quarter strings.
-        selected_point: Optional dict with 'retailer_id' and 'quarter' for dimming.
+    Each retailer gets a unique color, line dash, and marker symbol.
+    Y-axis auto-scales to the data range.
     """
     fig = go.Figure()
 
     nudged = _dodge_overlapping(tdp_data, quarters)
+    all_values = []
 
-    # Compute median TDP across retailers per quarter (not dodged)
     medians = []
     for q in quarters:
         vals = [tdp_data[r][q] for r in tdp_data if q in tdp_data[r]]
-        medians.append(statistics.median(vals) if vals else 0.0)
+        med = statistics.median(vals) if vals else 0.0
+        medians.append(med)
+    median_vals = [round(v, 1) for v in medians]
+    all_values.extend(median_vals)
 
-    # Add median reference line
     fig.add_trace(
         go.Scatter(
             x=quarters,
-            y=[round(v, 1) for v in medians],
+            y=median_vals,
             mode="lines",
             name="Median",
             line=dict(color=REFERENCE, dash="dash", width=2),
@@ -314,14 +330,15 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
         )
     )
 
-    # Add one line per retailer
     for ret_id in sorted(tdp_data.keys()):
         color = RETAILER_COLORS.get(ret_id, TEAL_SEQUENTIAL[0])
+        dash = RETAILER_LINE_STYLES.get(ret_id, "solid")
+        symbol = RETAILER_MARKERS.get(ret_id, "circle")
         name = _RETAILER_NAMES.get(ret_id, ret_id)
         true_values = [tdp_data[ret_id].get(q, 0.0) for q in quarters]
         plot_values = [nudged[ret_id].get(q, 0.0) for q in quarters]
+        all_values.extend(plot_values)
 
-        # Dim non-selected retailers when a point is pinned
         opacity = 1.0
         if selected_point and selected_point.get("retailer_id") != ret_id:
             opacity = 0.25
@@ -332,14 +349,16 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
                 y=[round(v, 1) for v in plot_values],
                 mode="lines+markers",
                 name=name,
-                line=dict(color=color, width=2.5),
-                marker=dict(color=color, size=7),
+                line=dict(color=color, width=2.5, dash=dash),
+                marker=dict(color=color, size=8, symbol=symbol),
                 opacity=opacity,
                 customdata=[ret_id] * len(quarters),
                 text=[f"{v:.1f}" for v in true_values],
                 hovertemplate="%{x}<br>TDP: %{text}<extra>%{fullData.name}</extra>",
             )
         )
+
+    y_range = _auto_y_range(all_values)
 
     fig.update_layout(
         **economist_layout(
@@ -358,15 +377,19 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
                 showline=False,
                 tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
                 title="TDP points",
+                range=y_range,
             ),
             legend=dict(
                 orientation="h",
-                yanchor="bottom",
-                y=1.02,
+                yanchor="top",
+                y=-0.15,
                 xanchor="left",
                 x=0,
+                font=dict(family=FONT_SANS, size=12),
+                entrywidthmode="fraction",
+                entrywidth=0.14,
             ),
-            height=420,
+            height=480,
         )
     )
 

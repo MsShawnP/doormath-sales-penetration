@@ -35,7 +35,7 @@ from app.constants import (
     fmt_pct,
 )
 from app.data import DEMO_AS_OF_DATE, PL_NAMES, RETAILER_NAMES
-from app.views.exceptions import compute_exceptions, sku_to_item_name
+from app.views.exceptions import compute_exceptions
 
 _RET_NAMES = RETAILER_NAMES
 _PL_NAMES = PL_NAMES
@@ -121,13 +121,14 @@ def _compute_scorecard_data(filters):
             product_lines=product_lines or None,
             sku=sku,
         )
-        addressable = auth_filtered["store_id"].nunique()
+        auth_pairs = auth_filtered[["sku_id", "store_id"]].drop_duplicates()
+        addressable = len(auth_pairs)
         sq = carrying_in_quarter(
             end_q,
             set(auth_filtered["store_id"].unique()),
             set(auth_filtered["sku_id"].unique()),
         )
-        carrying = sq["store_id"].nunique()
+        carrying = len(sq[["sku_id", "store_id"]].drop_duplicates())
 
         if prior_q:
             prior_pen = calc_penetration_rate(
@@ -180,13 +181,14 @@ def _compute_scorecard_data(filters):
             product_lines=pl_filter,
             sku=sku,
         )
-        addressable = auth_filtered["store_id"].nunique()
+        auth_pairs = auth_filtered[["sku_id", "store_id"]].drop_duplicates()
+        addressable = len(auth_pairs)
         sq = carrying_in_quarter(
             end_q,
             set(auth_filtered["store_id"].unique()),
             set(auth_filtered["sku_id"].unique()),
         )
-        carrying = sq["store_id"].nunique()
+        carrying = len(sq[["sku_id", "store_id"]].drop_duplicates())
 
         if prior_q:
             prior_pen = calc_penetration_rate(
@@ -213,18 +215,35 @@ def _compute_scorecard_data(filters):
     # Sort by addressable descending
     product_line_rows.sort(key=lambda r: r["addressable"], reverse=True)
 
-    # ── Top exceptions ──
+    # ── Top exceptions (one row per SKU, aggregated across stores) ──
     exception_rows, _ = compute_exceptions(filters)
     top_exceptions = []
-    for row in exception_rows[:10]:
-        top_exceptions.append(
-            {
-                "sku_id": row["sku_id"],
-                "item_name": row.get("item_name", sku_to_item_name(row["sku_id"])),
-                "retailer": row.get("retailer_name", ""),
-                "weeks_silent": row.get("weeks_silent", 0),
-            }
+    if exception_rows:
+        import pandas as pd
+
+        ex_df = pd.DataFrame(exception_rows)
+        sku_agg = (
+            ex_df.groupby("sku_id")
+            .agg(
+                item_name=("item_name", "first"),
+                stores=("store_id", "nunique"),
+                retailers=("retailer_name", lambda x: ", ".join(sorted(x.unique()))),
+                max_weeks=("weeks_silent", "max"),
+            )
+            .sort_values("max_weeks", ascending=False)
+            .head(10)
+            .reset_index()
         )
+        for _, row in sku_agg.iterrows():
+            top_exceptions.append(
+                {
+                    "sku_id": row["sku_id"],
+                    "item_name": row["item_name"],
+                    "retailer": row["retailers"],
+                    "stores": int(row["stores"]),
+                    "weeks_silent": int(row["max_weeks"]),
+                }
+            )
 
     generation_date = DEMO_AS_OF_DATE.strftime("%Y-%m-%d")
 
@@ -248,7 +267,7 @@ def _build_retailer_table(rows):
         html.Tr(
             [
                 html.Th("Retailer", style=_th_style()),
-                html.Th("Doors Carrying / Addressable", style=_th_style()),
+                html.Th("Scanning / Authorized", style=_th_style()),
                 html.Th("Penetration %", style=_th_style(align="right")),
                 html.Th("ACV%", style=_th_style(align="right")),
                 html.Th("TDP", style=_th_style(align="right")),
@@ -303,7 +322,7 @@ def _build_product_line_table(rows):
         html.Tr(
             [
                 html.Th("Product Line", style=_th_style()),
-                html.Th("Doors Carrying / Addressable", style=_th_style()),
+                html.Th("Scanning / Authorized", style=_th_style()),
                 html.Th("Penetration %", style=_th_style(align="right")),
                 html.Th("ACV%", style=_th_style(align="right")),
                 html.Th("Δ vs Prior Qtr", style=_th_style(align="right")),
@@ -366,10 +385,10 @@ def _build_exceptions_list(exceptions):
     header = html.Thead(
         html.Tr(
             [
-                html.Th("SKU ID", style=_th_style()),
                 html.Th("Item Name", style=_th_style()),
-                html.Th("Retailer", style=_th_style()),
-                html.Th("Weeks Silent", style=_th_style(align="right")),
+                html.Th("Retailers", style=_th_style()),
+                html.Th("Stores", style=_th_style(align="right")),
+                html.Th("Max Weeks Silent", style=_th_style(align="right")),
             ]
         ),
     )
@@ -381,9 +400,12 @@ def _build_exceptions_list(exceptions):
         body_rows.append(
             html.Tr(
                 [
-                    html.Td(exc["sku_id"], style=_td_style(bg=bg)),
                     html.Td(exc["item_name"], style=_td_style(bg=bg)),
-                    html.Td(exc["retailer"], style=_td_style(bg=bg)),
+                    html.Td(exc.get("retailer", ""), style=_td_style(bg=bg)),
+                    html.Td(
+                        fmt_number(exc.get("stores", 0)),
+                        style=_td_style(bg=bg, align="right"),
+                    ),
                     html.Td(
                         str(exc["weeks_silent"]),
                         style=_td_style(bg=bg, align="right", color=weeks_color),
@@ -447,14 +469,7 @@ def layout():
                 [
                     html.Div(
                         id="sc-hero-pct",
-                        style={
-                            "fontFamily": FONT_SERIF,
-                            "fontSize": "64px",
-                            "fontWeight": "700",
-                            "color": INK,
-                            "letterSpacing": "-0.02em",
-                            "lineHeight": "1",
-                        },
+                        className="hero-number",
                     ),
                     html.P(
                         "of authorized item-store pairs currently scanning",
@@ -642,14 +657,28 @@ def _update_scorecard(filter_json, active_tab):
     # Annotations
     annotations = []
 
-    if data["top_exceptions"]:
-        worst = data["top_exceptions"][0]
-        annotations.append(
-            annotation_callout(
-                f"Longest silence: {worst['item_name']} at {worst['retailer']} "
-                f"({worst['weeks_silent']} weeks) — authorized but not scanning."
+    if data["retailer_rows"]:
+        widest = max(data["retailer_rows"], key=lambda r: r["addressable"] - r["carrying"])
+        gap = widest["addressable"] - widest["carrying"]
+        if gap > 0:
+            annotations.append(
+                annotation_callout(
+                    f"{widest['name']} has the widest gap: {fmt_number(gap)} authorized "
+                    f"pairs not scanning ({fmt_pct(widest['penetration'])} penetration) "
+                    f"— the biggest opportunity for field-level recovery."
+                )
             )
-        )
+
+    if data["product_line_rows"]:
+        weakest = min(data["product_line_rows"], key=lambda r: r["penetration"])
+        if weakest["penetration"] < 0.95:
+            annotations.append(
+                annotation_callout(
+                    f"{weakest['name']} has the lowest penetration at "
+                    f"{fmt_pct(weakest['penetration'])} — the portfolio's "
+                    f"weakest link in shelf presence."
+                )
+            )
 
     if data["retailer_rows"]:
         declining = [r for r in data["retailer_rows"] if r["delta"] < -0.02]
@@ -662,16 +691,14 @@ def _update_scorecard(filter_json, active_tab):
                 )
             )
 
-    if data["product_line_rows"]:
-        weakest = min(data["product_line_rows"], key=lambda r: r["penetration"])
-        if weakest["penetration"] < 0.70:
-            annotations.append(
-                annotation_callout(
-                    f"{weakest['name']} has the lowest penetration at "
-                    f"{weakest['penetration'] * 100:.0f}% — the portfolio's "
-                    f"weakest link in shelf presence."
-                )
+    if data["top_exceptions"]:
+        worst = data["top_exceptions"][0]
+        annotations.append(
+            annotation_callout(
+                f"Longest silence: {worst['item_name']} at {worst['retailer']} "
+                f"({worst['weeks_silent']} weeks) — authorized but not scanning."
             )
+        )
 
     return (
         hero_text,

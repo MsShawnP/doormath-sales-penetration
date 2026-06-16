@@ -21,7 +21,14 @@ def economist_layout(**overrides):
         paper_bgcolor=CANVAS,
         plot_bgcolor=CANVAS,
         font=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
-        title=dict(font=dict(family=FONT_SERIF, size=22, color=INK)),
+        title=dict(
+            font=dict(family=FONT_SERIF, size=22, color=INK),
+            y=0.98,
+            yanchor="top",
+            x=0.0,
+            xanchor="left",
+            pad=dict(l=60),
+        ),
         xaxis=dict(
             showgrid=False,
             showline=True,
@@ -35,7 +42,7 @@ def economist_layout(**overrides):
             showline=False,
             tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
         ),
-        margin=dict(l=60, r=20, t=100, b=40),
+        margin=dict(l=60, r=20, t=80, b=40),
         hoverlabel=dict(
             bgcolor=CANVAS,
             font=dict(family=FONT_SANS, size=13, color=INK),
@@ -46,7 +53,6 @@ def economist_layout(**overrides):
         legend=dict(
             font=dict(family=FONT_SANS, size=11, color=TEXT_SECONDARY),
             bgcolor="rgba(0,0,0,0)",
-            itemwidth=30,
         ),
     )
     defaults.update(overrides)

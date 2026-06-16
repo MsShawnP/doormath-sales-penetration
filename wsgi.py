@@ -1,5 +1,7 @@
 """Thin entry point — named wsgi.py to avoid import collision with app/ package."""
 
+import os
+
 from flask import jsonify
 
 from app.app import server
@@ -16,4 +18,5 @@ def health():
 if __name__ == "__main__":
     from app.app import app
 
-    app.run(debug=True, use_reloader=False, port=8050)
+    debug = os.environ.get("DASH_DEBUG", "0") == "1"
+    app.run(debug=debug, use_reloader=False, port=8050)

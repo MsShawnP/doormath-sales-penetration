@@ -131,11 +131,17 @@ class TestScorecardData:
         assert len(data["top_exceptions"]) <= 10
 
     def test_top_exceptions_have_required_keys(self):
-        """Each exception row has sku_id, item_name, retailer, weeks_silent."""
+        """Each exception row has sku_id, item_name, retailer, stores, weeks_silent."""
         data = _get_scorecard_data()
-        expected = {"sku_id", "item_name", "retailer", "weeks_silent"}
+        expected = {"sku_id", "item_name", "retailer", "stores", "weeks_silent"}
         for exc in data["top_exceptions"]:
             assert set(exc.keys()) == expected
+
+    def test_top_exceptions_unique_by_sku(self):
+        """Top exceptions should have one row per unique SKU."""
+        data = _get_scorecard_data()
+        sku_ids = [exc["sku_id"] for exc in data["top_exceptions"]]
+        assert len(sku_ids) == len(set(sku_ids))
 
     def test_quarter_label_matches_filter(self):
         """Quarter label should match the end quarter from filters."""

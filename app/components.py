@@ -10,6 +10,7 @@ from app.constants import (
     CARD_SUBTITLE,
     CARD_TEXT,
     FAIL_BG,
+    GRIDLINE,
     RED_42,
     TEXT_SECONDARY,
 )
@@ -116,7 +117,7 @@ def annotation_callout(text):
         ),
         className="insight-line",
         style={
-            "borderLeft": f"3px solid {CARD_BG}",
+            "borderLeft": f"3px solid {GRIDLINE}",
             "paddingLeft": "16px",
             "marginTop": "12px",
             "marginBottom": "12px",

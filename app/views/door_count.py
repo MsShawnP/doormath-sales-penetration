@@ -12,9 +12,8 @@ from app.calculations import quarters_in_range
 from app.charts import CHART_CONFIG, economist_layout
 from app.components import annotation_callout, dark_callout_card
 from app.constants import (
-    AUTH_BAR,
+    DISABLED,
     FONT_SANS,
-    FONT_SERIF,
     GRIDLINE,
     INK,
     SCAN_BAR,
@@ -92,27 +91,35 @@ def _compute_penetration(auth, quarters):
 
 
 def _compute_retailer_bars(auth, quarters):
-    """Compute per-retailer authorized vs carrying door counts."""
+    """Compute per-retailer authorized vs scanning pair counts."""
     ret_names = STORE_INFO[["store_id", "retailer_name"]].drop_duplicates()
     auth_ret = auth.merge(ret_names, on="store_id", how="left")
-    auth_by_ret = (
-        auth_ret.groupby(["retailer_id", "retailer_name"])["store_id"].nunique().reset_index()
+
+    auth_pairs = (
+        auth_ret.groupby(["retailer_id", "retailer_name"])
+        .apply(lambda g: len(g[["sku_id", "store_id"]].drop_duplicates()), include_groups=False)
+        .reset_index(name="authorized_pairs")
     )
-    auth_by_ret.columns = ["retailer_id", "retailer_name", "authorized_doors"]
 
     sq = _carrying_scans(auth, quarters)
-    carry_by_ret = sq.groupby("retailer_id")["store_id"].nunique().reset_index()
-    carry_by_ret.columns = ["retailer_id", "carrying_doors"]
+    if sq.empty:
+        carry_pairs = pd.DataFrame(columns=["retailer_id", "scanning_pairs"])
+    else:
+        carry_pairs = (
+            sq.groupby("retailer_id")
+            .apply(lambda g: len(g[["sku_id", "store_id"]].drop_duplicates()), include_groups=False)
+            .reset_index(name="scanning_pairs")
+        )
 
-    result = auth_by_ret.merge(carry_by_ret, on="retailer_id", how="left")
-    result["carrying_doors"] = result["carrying_doors"].fillna(0).astype(int)
-    result["pct"] = result["carrying_doors"] / result["authorized_doors"]
-    result = result.sort_values("authorized_doors", ascending=True)
+    result = auth_pairs.merge(carry_pairs, on="retailer_id", how="left")
+    result["scanning_pairs"] = result["scanning_pairs"].fillna(0).astype(int)
+    result["pct"] = result["scanning_pairs"] / result["authorized_pairs"]
+    result = result.sort_values("authorized_pairs", ascending=True)
     return result.to_dict("records")
 
 
 def _compute_product_line_bars(auth, quarters):
-    """Compute per-product-line carrying doors broken down by retailer."""
+    """Compute per-product-line scanning pairs broken down by retailer."""
     sq = _carrying_scans(auth, quarters)
     if sq.empty:
         return {}
@@ -122,17 +129,18 @@ def _compute_product_line_bars(auth, quarters):
         on="store_id",
         how="left",
     )
-    grouped = (
-        sq_named.groupby(["product_line", "retailer_name"])["store_id"].nunique().reset_index()
+    scanning = (
+        sq_named.groupby(["product_line", "retailer_name"])
+        .apply(lambda g: len(g[["sku_id", "store_id"]].drop_duplicates()), include_groups=False)
+        .reset_index(name="scanning_pairs")
     )
-    grouped.columns = ["product_line", "retailer_name", "carrying_doors"]
 
     result = {}
-    for _, row in grouped.iterrows():
+    for _, row in scanning.iterrows():
         pl_name = PL_NAMES.get(row["product_line"], row["product_line"])
         if pl_name not in result:
             result[pl_name] = {}
-        result[pl_name][row["retailer_name"]] = int(row["carrying_doors"])
+        result[pl_name][row["retailer_name"]] = int(row["scanning_pairs"])
     return result
 
 
@@ -197,26 +205,27 @@ def _compute_auth_gaps(auth, quarters):
 
 
 def _compute_click_detail(auth, quarters, retailer_name):
-    """Compute detail card data for a clicked retailer."""
+    """Compute detail card data for a clicked retailer (pair-level)."""
     ret_row = STORE_INFO[STORE_INFO["retailer_name"] == retailer_name].iloc[0]
     ret_id = ret_row["retailer_id"]
 
     ret_auth = auth[auth["retailer_id"] == ret_id]
-    addressable = ret_auth["store_id"].nunique()
+    auth_pairs = ret_auth[["sku_id", "store_id"]].drop_duplicates()
+    addressable = len(auth_pairs)
 
     sq = _carrying_scans(ret_auth, quarters)
-    carrying_doors = sq["store_id"].nunique()
+    scanning = len(sq[["sku_id", "store_id"]].drop_duplicates())
 
     items_auth = ret_auth["sku_id"].nunique()
     items_carried = sq["sku_id"].nunique()
     items_not_carried = items_auth - items_carried
 
-    pct = carrying_doors / addressable if addressable > 0 else 0.0
+    pct = scanning / addressable if addressable > 0 else 0.0
 
     return {
         "retailer_name": retailer_name,
-        "carrying_doors": carrying_doors,
-        "addressable_doors": addressable,
+        "scanning_pairs": scanning,
+        "authorized_pairs": addressable,
         "pct": pct,
         "items_carried": items_carried,
         "items_not_carried": items_not_carried,
@@ -227,33 +236,39 @@ def _compute_click_detail(auth, quarters, retailer_name):
 
 
 def _build_retailer_chart(bar_data, selected_retailer=None):
-    """Build a horizontal grouped bar chart: authorized vs carrying by retailer."""
-    retailers = [d["retailer_name"] for d in bar_data]
-    auth_counts = [d["authorized_doors"] for d in bar_data]
-    carry_counts = [d["carrying_doors"] for d in bar_data]
+    """Build a stacked horizontal bar chart showing scanning pairs + gap per retailer.
 
-    auth_opacity = []
-    carry_opacity = []
+    The scanning portion (teal) and gap portion (light grey) stack to show
+    total authorized.  Gap percentage is annotated to the right of each bar
+    so the authorization-to-scan gap is immediately visible.
+    """
+    retailers = [d["retailer_name"] for d in bar_data]
+    scan_counts = [d["scanning_pairs"] for d in bar_data]
+    gap_counts = [d["authorized_pairs"] - d["scanning_pairs"] for d in bar_data]
+    gap_pcts = [1 - d["pct"] if d["pct"] > 0 else 1.0 for d in bar_data]
+
+    scan_opacity = []
+    gap_opacity = []
     for d in bar_data:
         if selected_retailer and d["retailer_name"] != selected_retailer:
-            auth_opacity.append(0.3)
-            carry_opacity.append(0.3)
+            scan_opacity.append(0.25)
+            gap_opacity.append(0.15)
         else:
-            auth_opacity.append(1.0)
-            carry_opacity.append(1.0)
+            scan_opacity.append(1.0)
+            gap_opacity.append(0.7)
 
     fig = go.Figure()
 
     fig.add_trace(
         go.Bar(
             y=retailers,
-            x=auth_counts,
-            name="Authorized",
+            x=scan_counts,
+            name="Scanning",
             orientation="h",
-            marker=dict(color=AUTH_BAR, opacity=auth_opacity),
-            text=[fmt_number(v) for v in auth_counts],
-            textposition="outside",
-            textfont=dict(family=FONT_SANS, size=12, color=INK),
+            marker=dict(color=SCAN_BAR, opacity=scan_opacity),
+            text=[fmt_number(v) for v in scan_counts],
+            textposition="inside",
+            textfont=dict(family=FONT_SANS, size=12, color=WHITE),
             hoverinfo="skip",
         )
     )
@@ -261,12 +276,12 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
     fig.add_trace(
         go.Bar(
             y=retailers,
-            x=carry_counts,
-            name="Carrying",
+            x=gap_counts,
+            name="Not scanning (gap)",
             orientation="h",
-            marker=dict(color=SCAN_BAR, opacity=carry_opacity),
-            text=[fmt_number(v) for v in carry_counts],
-            textposition="outside",
+            marker=dict(color=DISABLED, opacity=gap_opacity),
+            text=[f"{g:,.0f} ({p:.0%} gap)" for g, p in zip(gap_counts, gap_pcts)],
+            textposition="inside",
             textfont=dict(family=FONT_SANS, size=12, color=INK),
             hoverinfo="skip",
         )
@@ -274,14 +289,14 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
 
     fig.update_layout(
         **economist_layout(
-            barmode="group",
-            title=dict(text="Authorized vs Carrying Doors by Retailer"),
+            barmode="stack",
+            title=dict(text="Authorization-to-Scan Gap by Retailer"),
             xaxis=dict(
                 showgrid=True,
                 gridcolor=GRIDLINE,
                 showline=True,
                 linecolor=GRIDLINE,
-                title="Door Count",
+                title="Item-Store Pairs",
                 tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
             ),
             yaxis=dict(
@@ -290,15 +305,18 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
                 tickfont=dict(family=FONT_SANS, size=13, color=INK),
                 automargin=True,
             ),
-            margin=dict(l=120, r=60, t=100, b=40),
+            margin=dict(l=120, r=20, t=80, b=40),
             legend=dict(
                 orientation="h",
-                yanchor="bottom",
-                y=1.02,
+                yanchor="top",
+                y=-0.12,
                 xanchor="left",
                 x=0,
+                font=dict(family=FONT_SANS, size=12),
+                entrywidthmode="fraction",
+                entrywidth=0.3,
             ),
-            height=max(300, len(retailers) * 60 + 100),
+            height=max(300, len(retailers) * 55 + 100),
         )
     )
 
@@ -306,7 +324,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
 
 
 def _build_product_line_chart(pl_data):
-    """Build a stacked horizontal bar chart: carrying doors by product line and retailer."""
+    """Build a stacked horizontal bar chart: scanning pairs by product line and retailer."""
     if not pl_data:
         return go.Figure()
 
@@ -330,7 +348,7 @@ def _build_product_line_chart(pl_data):
                 marker=dict(color=color),
                 text=[fmt_number(v) if v > 0 else "" for v in values],
                 textposition="inside",
-                textfont=dict(family=FONT_SANS, size=11, color=WHITE),
+                textfont=dict(family=FONT_SANS, size=12, color=WHITE),
                 hoverinfo="skip",
             )
         )
@@ -338,13 +356,13 @@ def _build_product_line_chart(pl_data):
     fig.update_layout(
         **economist_layout(
             barmode="stack",
-            title=dict(text="Carrying Doors by Product Line"),
+            title=dict(text="Scanning Pairs by Product Line"),
             xaxis=dict(
                 showgrid=True,
                 gridcolor=GRIDLINE,
                 showline=True,
                 linecolor=GRIDLINE,
-                title="Carrying Doors",
+                title="Item-Store Pairs",
                 tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
             ),
             yaxis=dict(
@@ -353,15 +371,18 @@ def _build_product_line_chart(pl_data):
                 tickfont=dict(family=FONT_SANS, size=13, color=INK),
                 automargin=True,
             ),
-            margin=dict(l=160, r=40, t=100, b=40),
+            margin=dict(l=160, r=40, t=80, b=60),
             legend=dict(
                 orientation="h",
-                yanchor="bottom",
-                y=1.02,
+                yanchor="top",
+                y=-0.15,
                 xanchor="left",
                 x=0,
+                font=dict(family=FONT_SANS, size=12),
+                entrywidthmode="fraction",
+                entrywidth=0.16,
             ),
-            height=max(300, len(product_lines) * 50 + 120),
+            height=max(300, len(product_lines) * 50 + 140),
         )
     )
 
@@ -379,14 +400,7 @@ def layout():
                 [
                     html.Div(
                         id="dc-hero-pct",
-                        style={
-                            "fontFamily": FONT_SERIF,
-                            "fontSize": "64px",
-                            "fontWeight": "700",
-                            "color": INK,
-                            "letterSpacing": "-0.02em",
-                            "lineHeight": "1",
-                        },
+                        className="hero-number",
                     ),
                     html.P(
                         "of authorized item-store pairs currently scanning",
@@ -571,9 +585,12 @@ def _update_callout_and_dim(pinned_retailer, filter_json):
 
     card = dark_callout_card(
         title=detail["retailer_name"],
-        subtitle=f"{detail['carrying_doors']} of {detail['addressable_doors']} addressable doors",
+        subtitle=(
+            f"{fmt_number(detail['scanning_pairs'])} of "
+            f"{fmt_number(detail['authorized_pairs'])} authorized pairs scanning"
+        ),
         rows=[
-            {"label": "Penetration", "value": fmt_pct(detail["pct"])},
+            {"label": "Pair penetration", "value": fmt_pct(detail["pct"])},
             {"label": "Items carried", "value": fmt_number(detail["items_carried"])},
             {"label": "Items not carried", "value": fmt_number(detail["items_not_carried"])},
         ],

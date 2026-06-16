@@ -146,9 +146,9 @@ def test_retailer_bar_chart_has_correct_groups():
     assert len(bar_data) == 6
     for item in bar_data:
         assert "retailer_name" in item
-        assert "authorized_doors" in item
-        assert "carrying_doors" in item
-        assert item["authorized_doors"] >= item["carrying_doors"]
+        assert "authorized_pairs" in item
+        assert "scanning_pairs" in item
+        assert item["authorized_pairs"] >= item["scanning_pairs"]
 
 
 def test_quarter_to_weeks():

@@ -112,7 +112,9 @@
     font-weight: 700;
     color: var(--ll-london-5);
     letter-spacing: -0.02em;
-    line-height: 1.1;
+    line-height: 1;
+    display: inline-block;
+    vertical-align: baseline;
 }
 
 .hero-subtext {
@@ -232,11 +234,12 @@
     outline-offset: 2px;
 }
 
-/* ── Dash 4 accent overrides (replace default purple #7f4bc4) ── */
+/* ── Dash accent overrides (replace default purple) ── */
 
-/* Tab selected indicator — Dash uses border-top, not border-bottom */
+/* Tab selected indicator */
 .tab--selected {
     border-top-color: var(--ll-chicago-20) !important;
+    border-color: var(--ll-chicago-20) !important;
 }
 
 /* Dropdown focus/open outline */
@@ -244,6 +247,7 @@
 .dash-dropdown:focus-visible,
 .dash-dropdown[data-state='open'] {
     outline-color: var(--ll-chicago-20) !important;
+    border-color: var(--ll-chicago-20) !important;
 }
 
 /* Checkbox accent in dropdown options */
@@ -251,9 +255,74 @@
     accent-color: var(--ll-chicago-20);
 }
 
-/* Dropdown option hover */
+/* Dropdown option hover & selected */
 .dash-options-list-option:hover {
-    background-color: var(--ll-chicago-95);
+    background-color: var(--ll-chicago-95) !important;
+}
+
+.dash-options-list-option--selected {
+    background-color: var(--ll-chicago-95) !important;
+}
+
+/* Dropdown selected value tags */
+.dash-dropdown .dash-multi-value {
+    background-color: var(--ll-chicago-95) !important;
+}
+
+.dash-dropdown .dash-multi-value__label {
+    color: var(--ll-chicago-20) !important;
+}
+
+.dash-dropdown .dash-multi-value__remove:hover {
+    background-color: var(--ll-chicago-85) !important;
+    color: var(--ll-chicago-20) !important;
+}
+
+/* Dropdown indicator (caret) */
+.dash-dropdown .dash-dropdown-indicator {
+    color: var(--ll-london-40) !important;
+}
+
+/* Dropdown clear button */
+.dash-dropdown .dash-clear-indicator:hover {
+    color: var(--ll-tokyo-40) !important;
+}
+
+/* Dash input focus */
+input:focus,
+textarea:focus,
+select:focus {
+    outline-color: var(--ll-chicago-20) !important;
+    border-color: var(--ll-chicago-20) !important;
+}
+
+/* AG Grid row selection — replace blue/purple default */
+.ag-theme-alpine .ag-row-selected,
+.ag-theme-balham .ag-row-selected,
+.ag-row-selected {
+    background-color: var(--ll-hk-95) !important;
+}
+
+.ag-theme-alpine .ag-row-hover,
+.ag-theme-balham .ag-row-hover,
+.ag-row-hover {
+    background-color: var(--ll-london-95) !important;
+}
+
+/* AG Grid header sort indicator */
+.ag-header-cell-sorted-asc,
+.ag-header-cell-sorted-desc {
+    color: var(--ll-chicago-20) !important;
+}
+
+/* AG Grid pagination active button */
+.ag-paging-button.ag-active {
+    color: var(--ll-chicago-20) !important;
+}
+
+/* AG Grid checkbox */
+.ag-checkbox-input-wrapper.ag-checked::after {
+    color: var(--ll-chicago-20) !important;
 }
 
 /* Dropdown width containment */

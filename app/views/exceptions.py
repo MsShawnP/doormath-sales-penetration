@@ -206,54 +206,38 @@ def compute_summary_stats(exception_rows, total_authorized):
 
 _COLUMN_DEFS = [
     {
-        "field": "sku_id",
-        "headerName": "SKU ID",
-        "width": 120,
-        "rowGroup": True,
-        "hide": True,
-    },
-    {
         "field": "item_name",
-        "headerName": "Item Name",
-        "width": 200,
+        "headerName": "Item",
+        "flex": 2,
+        "minWidth": 220,
         "tooltipField": "item_name",
-    },
-    {
-        "field": "product_line",
-        "headerName": "Product Line",
-        "width": 140,
     },
     {
         "field": "retailer_name",
         "headerName": "Retailer",
-        "width": 140,
-        "rowGroup": True,
-        "hide": True,
+        "flex": 1,
+        "minWidth": 140,
+        "tooltipField": "retailer_name",
     },
     {
         "field": "store_id",
-        "headerName": "Store ID",
-        "width": 100,
-    },
-    {
-        "field": "region",
-        "headerName": "Region",
-        "width": 100,
+        "headerName": "Store",
+        "width": 90,
     },
     {
         "field": "authorized_date",
-        "headerName": "Authorized Date",
-        "width": 120,
+        "headerName": "Authorized",
+        "width": 110,
     },
     {
         "field": "last_scan_date",
-        "headerName": "Last Scan Date",
-        "width": 120,
+        "headerName": "Last Scan",
+        "width": 110,
     },
     {
         "field": "weeks_silent",
         "headerName": "Weeks Silent",
-        "width": 100,
+        "width": 120,
         "sort": "desc",
         "cellStyle": {
             "styleConditions": [
@@ -268,12 +252,103 @@ _COLUMN_DEFS = [
             ],
         },
     },
-    {
-        "field": "volume_tier",
-        "headerName": "Store Volume Tier",
-        "width": 80,
-    },
 ]
+
+
+def _build_sku_summary(exception_rows):
+    """Build a summary table grouped by SKU — surfaces 'this item is a problem everywhere'."""
+    if not exception_rows:
+        return None
+
+    df = pd.DataFrame(exception_rows)
+    summary = (
+        df.groupby("item_name")
+        .agg(
+            exceptions=("store_id", "size"),
+            retailers=("retailer_name", "nunique"),
+            avg_weeks=("weeks_silent", "mean"),
+        )
+        .sort_values("exceptions", ascending=False)
+        .reset_index()
+    )
+
+    header = html.Thead(
+        html.Tr(
+            [
+                html.Th("Item", style=_th_style()),
+                html.Th("Exceptions", style=_th_style(align="right")),
+                html.Th("Retailers", style=_th_style(align="right")),
+                html.Th("Avg Weeks Silent", style=_th_style(align="right")),
+            ]
+        ),
+    )
+
+    from app.constants import CANVAS
+
+    body_rows = []
+    for i, row in summary.iterrows():
+        bg = CANVAS if i % 2 == 0 else WHITE
+        weeks_color = TOKYO_40 if row["avg_weeks"] > 12 else INK
+        body_rows.append(
+            html.Tr(
+                [
+                    html.Td(
+                        row["item_name"],
+                        style=_td_style(bg=bg),
+                    ),
+                    html.Td(
+                        fmt_number(int(row["exceptions"])),
+                        style=_td_style(bg=bg, align="right"),
+                    ),
+                    html.Td(
+                        str(int(row["retailers"])),
+                        style=_td_style(bg=bg, align="right"),
+                    ),
+                    html.Td(
+                        f"{row['avg_weeks']:.0f}",
+                        style=_td_style(bg=bg, align="right", color=weeks_color),
+                    ),
+                ]
+            )
+        )
+
+    body = html.Tbody(body_rows)
+    return html.Table(
+        [header, body],
+        style={
+            "width": "100%",
+            "borderCollapse": "collapse",
+            "fontFamily": FONT_SANS,
+            "fontSize": "14px",
+        },
+    )
+
+
+def _th_style(align="left"):
+    return {
+        "textAlign": align,
+        "padding": "8px 12px",
+        "borderBottom": f"2px solid {INK}",
+        "fontFamily": FONT_SANS,
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "color": INK,
+        "whiteSpace": "nowrap",
+    }
+
+
+def _td_style(bg=WHITE, align="left", color=None):
+    from app.constants import GRIDLINE
+
+    return {
+        "textAlign": align,
+        "padding": "6px 12px",
+        "borderBottom": f"1px solid {GRIDLINE}",
+        "fontFamily": FONT_SANS,
+        "fontSize": "14px",
+        "color": color or INK,
+        "backgroundColor": bg,
+    }
 
 
 # ── Layout ──
@@ -285,33 +360,64 @@ def layout():
         [
             # Summary stats area
             html.Div(id="ex-summary-stats"),
-            # Annotation callout area (shown when exceptions > 10% of authorized)
+            # Annotation callout area
             html.Div(id="ex-annotation"),
-            # Download CSV button + grid
+            # SKU summary roll-up
             html.Div(
                 [
-                    html.Button(
-                        "Download CSV",
-                        id="ex-download-btn",
-                        n_clicks=0,
+                    html.H3(
+                        "Exceptions by Item",
                         style={
-                            "backgroundColor": CHICAGO_20,
-                            "color": WHITE,
-                            "border": "none",
-                            "padding": "8px 20px",
-                            "borderRadius": "2px",
-                            "fontFamily": FONT_SANS,
-                            "fontSize": "14px",
-                            "fontWeight": "600",
-                            "cursor": "pointer",
+                            "fontFamily": FONT_SERIF,
+                            "fontSize": "22px",
+                            "fontWeight": "700",
+                            "color": INK,
                             "marginBottom": "12px",
                         },
                     ),
-                    dcc.Download(id="ex-download"),
+                    html.Div(id="ex-sku-summary"),
                 ],
-                style={"display": "flex", "justifyContent": "flex-end"},
+                style={"marginBottom": "40px"},
             ),
-            # AG Grid table
+            # Download CSV button + detail grid
+            html.Div(
+                [
+                    html.H3(
+                        "Exception Detail",
+                        style={
+                            "fontFamily": FONT_SERIF,
+                            "fontSize": "22px",
+                            "fontWeight": "700",
+                            "color": INK,
+                            "marginBottom": "12px",
+                        },
+                    ),
+                    html.Div(
+                        [
+                            html.Button(
+                                "Download CSV",
+                                id="ex-download-btn",
+                                n_clicks=0,
+                                style={
+                                    "backgroundColor": CHICAGO_20,
+                                    "color": WHITE,
+                                    "border": "none",
+                                    "padding": "8px 20px",
+                                    "borderRadius": "2px",
+                                    "fontFamily": FONT_SANS,
+                                    "fontSize": "14px",
+                                    "fontWeight": "600",
+                                    "cursor": "pointer",
+                                    "marginBottom": "12px",
+                                },
+                            ),
+                            dcc.Download(id="ex-download"),
+                        ],
+                        style={"display": "flex", "justifyContent": "flex-end"},
+                    ),
+                ],
+            ),
+            # AG Grid detail table
             html.Div(
                 dag.AgGrid(
                     id="ex-grid",
@@ -324,21 +430,16 @@ def layout():
                     },
                     dashGridOptions={
                         "pagination": True,
-                        "paginationPageSize": 25,
+                        "paginationPageSize": 50,
                         "rowSelection": {"mode": "singleRow"},
-                        "groupDefaultExpanded": 0,
                         "animateRows": True,
                         "domLayout": "autoHeight",
-                        "autoGroupColumnDef": {
-                            "headerName": "Retailer / SKU",
-                            "minWidth": 250,
-                            "cellRendererParams": {"suppressCount": False},
-                        },
+                        "tooltipShowDelay": 300,
                     },
                     style={"width": "100%"},
                     className="ag-theme-alpine",
                 ),
-                **{"aria-label": "Exception list — authorized items not scanning"},
+                **{"aria-label": "Exception detail — authorized items not scanning"},
             ),
             # Inline detail card (shown on row selection)
             html.Div(id="ex-detail-card"),
@@ -355,6 +456,7 @@ def layout():
     Output("ex-grid", "rowData"),
     Output("ex-summary-stats", "children"),
     Output("ex-annotation", "children"),
+    Output("ex-sku-summary", "children"),
     Output("ex-data-store", "data"),
     Input("filter-state", "data"),
     Input("main-tabs", "value"),
@@ -362,7 +464,7 @@ def layout():
 def _update_exceptions_view(filter_json, active_tab):
     """Recompute exception list when filters change."""
     if active_tab != "exceptions":
-        return no_update, no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update, no_update
     filters = json.loads(filter_json) if filter_json else {}
 
     exception_rows, total_authorized = compute_exceptions(filters)
@@ -472,7 +574,7 @@ def _update_exceptions_view(filter_json, active_tab):
         )
 
     if exception_rows:
-        never_count = sum(1 for r in exception_rows if r.get("last_scan") == "Never")
+        never_count = sum(1 for r in exception_rows if r.get("last_scan_date") == "Never")
         if never_count > 0:
             annotations.append(
                 annotation_callout(
@@ -492,10 +594,14 @@ def _update_exceptions_view(filter_json, active_tab):
                     )
                 )
 
+    # SKU summary roll-up
+    sku_summary = _build_sku_summary(exception_rows)
+
     return (
         exception_rows,
         summary,
         annotations,
+        sku_summary or [],
         json.dumps(exception_rows),
     )
 
