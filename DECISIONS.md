@@ -65,3 +65,17 @@ Before modifying any data generation logic (generator scripts, seed data, schema
 
 **Disable Werkzeug reloader for local dev.**
 `debug=True` with reloader enabled loads the data module twice (30s+ startup). Disabled reloader for `python wsgi.py` local runs. Production uses gunicorn which doesn't have this issue.
+
+## 2026-06-16 — Rounds 3+4 visual polish
+
+**Batch ACV%/TDP computation for Trends.**
+The per-retailer-per-quarter loop (6 retailers × 8 quarters × 2 metrics = 96 calls) was slow. New `batch_acv_by_retailer()` and `batch_tdp_by_retailer()` in calculations.py filter auth once, join scan_quarterly once, and groupby `(retailer_id, quarter)` in a single pass. Verified parity with individual calls.
+
+**Debug toolbar off by default, env-var opt-in.**
+`wsgi.py` now uses `DASH_DEBUG=1` to enable. Previously hardcoded `debug=True` which showed the Dash devtools toolbar in screenshots and production.
+
+**Scorecard Top Exceptions aggregated by SKU.**
+Raw exception rows showed the same SKU repeated per-store (e.g. CHP-AS-001 × 10). Now grouped by `sku_id` with columns: Item Name, Retailers (comma-joined), Stores (nunique), Max Weeks Silent. Sorted by max weeks descending.
+
+**Annotation accent bar uses GRIDLINE, not CARD_BG.**
+The `annotation_callout()` component inline-styled the left border with `CARD_BG` (#1a1a1a, dark card background) instead of `GRIDLINE` (#d9d9d9, London-85). Corrected to match the design system's insight-line specification.

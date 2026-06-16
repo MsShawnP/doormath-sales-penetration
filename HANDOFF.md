@@ -81,9 +81,46 @@ Visual polish in progress. 3 of 6 identified bugs fixed, 2 remaining before rede
 10. Redeploy to Fly.io
 11. Run `/ce:review`
 
+### Session 7–9 — Feedback rounds 1–2 + pair-level fix (2026-06-16)
+
+- Fixed synthetic data (auth gaps, scanning gaps, variance)
+- Changed hero to SKU-level penetration
+- Exceptions table fixes (scroll, Group col, truncation, SKU grouping)
+- Legend truncation fix
+- ACV%/charts verified with variance
+- SKU drill-down, print button, narrative annotations added
+- Redeployed to Fly.io
+- Pair-level fix for calc_penetration_rate and calc_acv_pct
+
+### Session 10 — Rounds 3+4 visual polish (2026-06-16)
+
+**Round 3 fixes:**
+- Legend below all charts (y=-0.12 to -0.15), no overlap with title
+- `entrywidthmode="fraction"` — full legend text, no truncation
+- Y-axis auto-scale via `_auto_y_range()` with 15% padding
+- Retailer chart replaced with stacked gap chart (scanning + gap segments)
+- Hero baseline fixed with CSS class `hero-number`
+- ACV% lines differentiated (unique color + dash + marker per retailer)
+- Purple removed — comprehensive CSS overrides for Dash dropdowns, tabs, AG Grid
+
+**Round 4 fixes:**
+- Debug toolbar disabled (`debug=False`, opt-in via `DASH_DEBUG=1`)
+- Trends performance: `batch_acv_by_retailer()` + `batch_tdp_by_retailer()` — 2 batch ops instead of 96 individual calls
+- Scorecard Top Exceptions deduped by SKU (store count + retailer list)
+- Exception Detail columns: wider minWidth, tooltips enabled
+- Annotation accent bar color corrected from CARD_BG to GRIDLINE
+- Bar label font bumped 11→12px
+
+**Verified:** ACV% values range 68–95% (pair-level working). No debug toolbar. 122 tests pass, ruff clean.
+
+**Committed:** `3bbc2c4` on main.
+
 ## What's next
 
-See Session 6 entry above — 9-item feedback list starting with synthetic data fix.
+1. Run `/ce:review` — code review ensemble
+2. Redeploy to Fly.io with Round 3+4 changes
+3. If user provides Round 5 feedback, address it
+4. Run `/ce:compound` to extract learnings
 
 ## Key files
 

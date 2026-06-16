@@ -1,7 +1,7 @@
 # Door Math — Plan
 
 **Tier:** Medium
-**Status:** Active — visual polish complete, 9-item feedback list pending (critical: fix synthetic data generation)
+**Status:** Active — Rounds 1–4 visual polish complete. Ready for `/ce:review` then redeploy.
 
 ## Implementation Units (from plan doc)
 
