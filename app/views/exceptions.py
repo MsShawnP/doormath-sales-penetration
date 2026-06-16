@@ -458,21 +458,44 @@ def _update_exceptions_view(filter_json, active_tab):
             ),
         )
 
-    # Annotation callout
-    annotation = []
+    # Annotation callouts
+    annotations = []
     if stats["exception_pct"] > 0.10:
         pct_display = f"{stats['exception_pct'] * 100:.1f}%"
-        annotation = annotation_callout(
-            f"{fmt_number(stats['total_exceptions'])} of "
-            f"{fmt_number(total_authorized)} authorized item-store pairs "
-            f"({pct_display}) haven't scanned recently — distribution "
-            f"gaps may be widening."
+        annotations.append(
+            annotation_callout(
+                f"{fmt_number(stats['total_exceptions'])} of "
+                f"{fmt_number(total_authorized)} authorized item-store pairs "
+                f"({pct_display}) haven't scanned recently — distribution "
+                f"gaps may be widening."
+            )
         )
+
+    if exception_rows:
+        never_count = sum(1 for r in exception_rows if r.get("last_scan") == "Never")
+        if never_count > 0:
+            annotations.append(
+                annotation_callout(
+                    f"{fmt_number(never_count)} item-store pairs have never scanned "
+                    f"— these authorizations may exist on paper only."
+                )
+            )
+
+        if stats["top_retailers"] and stats["total_exceptions"] > 0:
+            top_name, top_count = stats["top_retailers"][0]
+            top_share = top_count / stats["total_exceptions"]
+            if top_share > 0.30:
+                annotations.append(
+                    annotation_callout(
+                        f"{top_name} accounts for {top_share * 100:.0f}% of all "
+                        f"exceptions — a concentrated problem worth a targeted fix."
+                    )
+                )
 
     return (
         exception_rows,
         summary,
-        annotation,
+        annotations,
         json.dumps(exception_rows),
     )
 

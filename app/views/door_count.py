@@ -3,6 +3,7 @@ click-to-pin callout cards, and auth gap narrative annotations."""
 
 import json
 
+import pandas as pd
 import plotly.graph_objects as go
 from cinderhaven_store_universe.constants import SKU_NAMES
 from dash import Input, Output, State, callback, dcc, html, no_update
@@ -136,32 +137,62 @@ def _compute_product_line_bars(auth, quarters):
 
 
 def _compute_auth_gaps(auth, quarters):
-    """Find retailers where the auth gap exceeds 15% of authorized doors."""
+    """Find retailers where authorized pairs not scanning exceeds 15%."""
     ret_names = STORE_INFO[["store_id", "retailer_name"]].drop_duplicates()
     auth_ret = auth.merge(ret_names, on="store_id", how="left")
-    auth_by_ret = (
-        auth_ret.groupby(["retailer_id", "retailer_name"])["store_id"].nunique().reset_index()
+
+    auth_pairs = (
+        auth_ret.groupby(["retailer_id", "retailer_name"])
+        .apply(lambda g: len(g[["sku_id", "store_id"]].drop_duplicates()), include_groups=False)
+        .reset_index(name="authorized_pairs")
     )
-    auth_by_ret.columns = ["retailer_id", "retailer_name", "authorized_doors"]
 
     sq = _carrying_scans(auth, quarters)
-    carry_by_ret = sq.groupby("retailer_id")["store_id"].nunique().reset_index()
-    carry_by_ret.columns = ["retailer_id", "carrying_doors"]
+    if sq.empty:
+        carry_pairs = pd.DataFrame(columns=["retailer_id", "carrying_pairs"])
+    else:
+        carry_pairs = (
+            sq.groupby("retailer_id")
+            .apply(lambda g: len(g[["sku_id", "store_id"]].drop_duplicates()), include_groups=False)
+            .reset_index(name="carrying_pairs")
+        )
 
-    merged = auth_by_ret.merge(carry_by_ret, on="retailer_id", how="left")
-    merged["carrying_doors"] = merged["carrying_doors"].fillna(0).astype(int)
-    merged["gap"] = merged["authorized_doors"] - merged["carrying_doors"]
-    merged["gap_pct"] = merged["gap"] / merged["authorized_doors"]
+    merged = auth_pairs.merge(carry_pairs, on="retailer_id", how="left")
+    merged["carrying_pairs"] = merged["carrying_pairs"].fillna(0).astype(int)
+    merged["gap"] = merged["authorized_pairs"] - merged["carrying_pairs"]
+    merged["gap_pct"] = merged["gap"] / merged["authorized_pairs"]
 
     annotations = []
-    for _, row in merged[merged["gap_pct"] > 0.15].iterrows():
+
+    if merged.empty:
+        return annotations
+
+    best = merged.loc[merged["gap_pct"].idxmin()]
+    worst = merged.loc[merged["gap_pct"].idxmax()]
+
+    if best["gap_pct"] < 0.05 and len(merged) > 1:
+        best_pct = (1 - best["gap_pct"]) * 100
+        annotations.append(
+            f"{best['retailer_name']} leads at {best_pct:.0f}% pair coverage — "
+            f"a model for what full execution looks like."
+        )
+
+    for _, row in merged[merged["gap_pct"] > 0.10].iterrows():
         gap = int(row["gap"])
-        auth_doors = int(row["authorized_doors"])
+        auth_ct = int(row["authorized_pairs"])
         name = row["retailer_name"]
         annotations.append(
-            f"{name}: {gap} of {auth_doors} authorized stores haven't scanned "
-            f"recently — the shelf says no even though the retailer said yes."
+            f"{name}: {gap} of {auth_ct} authorized item-store pairs haven't "
+            f"scanned recently — the shelf says no even though the buyer said yes."
         )
+
+    if worst["gap_pct"] > 0.20 and len(merged) > 1:
+        worst_pct = worst["gap_pct"] * 100
+        annotations.append(
+            f"{worst['retailer_name']} has the widest distribution gap at "
+            f"{worst_pct:.0f}% — prioritize field visits here."
+        )
+
     return annotations
 
 

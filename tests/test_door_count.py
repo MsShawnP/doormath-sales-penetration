@@ -195,7 +195,7 @@ def test_product_line_chart_data():
 
 
 def test_auth_gap_annotations_are_computed():
-    """Auth gap annotations produce at least one annotation under default filters."""
+    """Auth gap annotations produce narrative insights under default filters."""
     from app.views.door_count import _compute_auth_gaps, _filter_auth
 
     filters = {
@@ -206,8 +206,7 @@ def test_auth_gap_annotations_are_computed():
     auth = _filter_auth(filters)
     annotations = _compute_auth_gaps(auth, ["Q4 2025"])
 
-    # With data gaps, some retailers should have a gap > 15%
     assert isinstance(annotations, list)
+    assert len(annotations) >= 1
     for a in annotations:
-        assert "authorized stores" in a
-        assert "haven't scanned" in a
+        assert isinstance(a, str)

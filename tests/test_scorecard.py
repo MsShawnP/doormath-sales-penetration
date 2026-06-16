@@ -53,6 +53,12 @@ class TestScorecardLayout:
         found = _find_component_by_id(result, "sc-exceptions-list")
         assert found, "Exceptions list with id='sc-exceptions-list' not found"
 
+    def test_layout_has_print_button(self):
+        """The layout should contain the browser print button."""
+        result = layout()
+        found = _find_component_by_id(result, "sc-print-btn")
+        assert found, "Print button with id='sc-print-btn' not found"
+
     def test_layout_has_download_button(self):
         """The layout should contain the PDF download button."""
         result = layout()

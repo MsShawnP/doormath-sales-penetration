@@ -8,7 +8,7 @@ generation via ``app.pdf``.
 import json
 
 from cinderhaven_store_universe.constants import PRODUCT_LINES, RETAILERS
-from dash import Input, Output, State, callback, dcc, html, no_update
+from dash import Input, Output, State, callback, clientside_callback, dcc, html, no_update
 
 from app.calculations import (
     calc_acv_pct,
@@ -457,7 +457,7 @@ def layout():
                         },
                     ),
                     html.P(
-                        "of addressable doors carrying at least one Cinderhaven item",
+                        "of authorized item-store pairs currently scanning",
                         style={
                             "fontFamily": FONT_SANS,
                             "fontSize": "17px",
@@ -534,9 +534,26 @@ def layout():
             ),
             # Annotation callout
             html.Div(id="sc-annotation"),
-            # Download PDF button
+            # Export buttons
             html.Div(
                 [
+                    html.Button(
+                        "Print",
+                        id="sc-print-btn",
+                        n_clicks=0,
+                        style={
+                            "backgroundColor": "transparent",
+                            "color": CHICAGO_20,
+                            "border": f"1px solid {CHICAGO_20}",
+                            "padding": "10px 24px",
+                            "borderRadius": "2px",
+                            "fontFamily": FONT_SANS,
+                            "fontSize": "14px",
+                            "fontWeight": "600",
+                            "cursor": "pointer",
+                            "marginRight": "12px",
+                        },
+                    ),
                     html.Button(
                         "Download PDF",
                         id="sc-download-btn",
@@ -622,14 +639,39 @@ def _update_scorecard(filter_json, active_tab):
     product_line_table = _build_product_line_table(data["product_line_rows"])
     exceptions_list = _build_exceptions_list(data["top_exceptions"])
 
-    # Annotation
-    annotation = []
+    # Annotations
+    annotations = []
+
     if data["top_exceptions"]:
         worst = data["top_exceptions"][0]
-        annotation = annotation_callout(
-            f"Longest silence: {worst['item_name']} at {worst['retailer']} "
-            f"({worst['weeks_silent']} weeks) — authorized but not scanning."
+        annotations.append(
+            annotation_callout(
+                f"Longest silence: {worst['item_name']} at {worst['retailer']} "
+                f"({worst['weeks_silent']} weeks) — authorized but not scanning."
+            )
         )
+
+    if data["retailer_rows"]:
+        declining = [r for r in data["retailer_rows"] if r["delta"] < -0.02]
+        if declining:
+            names = ", ".join(r["name"] for r in declining[:3])
+            annotations.append(
+                annotation_callout(
+                    f"Quarter-over-quarter declines at {names} — investigate "
+                    f"whether these are seasonal or early signs of distribution loss."
+                )
+            )
+
+    if data["product_line_rows"]:
+        weakest = min(data["product_line_rows"], key=lambda r: r["penetration"])
+        if weakest["penetration"] < 0.70:
+            annotations.append(
+                annotation_callout(
+                    f"{weakest['name']} has the lowest penetration at "
+                    f"{weakest['penetration'] * 100:.0f}% — the portfolio's "
+                    f"weakest link in shelf presence."
+                )
+            )
 
     return (
         hero_text,
@@ -638,7 +680,7 @@ def _update_scorecard(filter_json, active_tab):
         retailer_table,
         product_line_table,
         exceptions_list,
-        annotation,
+        annotations,
     )
 
 
@@ -666,3 +708,11 @@ def _download_pdf(n_clicks, filter_json):
         return no_update, error_banner(str(exc))
     except Exception as exc:
         return no_update, error_banner(f"PDF generation failed: {exc}")
+
+
+clientside_callback(
+    "function(n) { if (n) { window.print(); } return ''; }",
+    Output("sc-print-btn", "title"),
+    Input("sc-print-btn", "n_clicks"),
+    prevent_initial_call=True,
+)
