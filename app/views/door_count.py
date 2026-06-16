@@ -73,16 +73,21 @@ def _carrying_scans(auth, quarters):
 
 
 def _compute_penetration(auth, quarters):
-    """Compute penetration: carrying_doors / addressable_doors."""
-    addressable_stores = auth["store_id"].unique()
-    if len(addressable_stores) == 0 or not quarters:
+    """Compute SKU-level penetration: carrying pairs / authorized pairs.
+
+    Counts at the (sku_id, store_id) level — what fraction of authorized
+    item-store slots are actually scanning in the quarter range.
+    """
+    auth_pairs = auth[["sku_id", "store_id"]].drop_duplicates()
+    addressable = len(auth_pairs)
+    if addressable == 0 or not quarters:
         return 0.0, 0, 0
 
     sq = _carrying_scans(auth, quarters)
-    carrying_doors = sq["store_id"].nunique()
-    addressable = len(addressable_stores)
-    pct = carrying_doors / addressable
-    return pct, carrying_doors, addressable
+    carrying_pairs = sq[["sku_id", "store_id"]].drop_duplicates()
+    carrying = len(carrying_pairs)
+    pct = carrying / addressable
+    return pct, carrying, addressable
 
 
 def _compute_retailer_bars(auth, quarters):
@@ -353,7 +358,7 @@ def layout():
                         },
                     ),
                     html.P(
-                        "of addressable doors carrying at least one Cinderhaven item",
+                        "of authorized item-store pairs currently scanning",
                         id="dc-hero-subtitle",
                         style={
                             "fontFamily": FONT_SANS,
@@ -437,7 +442,7 @@ def _update_door_count_view(filter_json, active_tab):
         sku_label = SKU_NAMES.get(sku, sku)
         subtitle = f"of addressable doors carrying {sku_label}"
     else:
-        subtitle = "of addressable doors carrying at least one Cinderhaven item"
+        subtitle = "of authorized item-store pairs currently scanning"
 
     # Trend vs prior quarter
     if prior_q:

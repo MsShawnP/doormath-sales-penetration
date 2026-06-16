@@ -17,7 +17,13 @@ from cinderhaven_store_universe import (
     get_slow_leak_config,
     get_stores,
 )
-from cinderhaven_store_universe.constants import DEMO_AS_OF_DATE, PRODUCT_LINES, RETAILERS
+from cinderhaven_store_universe.constants import (
+    DEMO_AS_OF_DATE,
+    LATE_LAUNCH,
+    NEVER_SCAN_RATES,
+    PRODUCT_LINES,
+    RETAILERS,
+)
 
 _CACHE_DIR = Path(__file__).resolve().parent.parent / ".cache"
 
@@ -35,8 +41,12 @@ STORE_INFO["weight"] = STORE_INFO["volume_tier"].map({"A": 3, "B": 2, "C": 1})
 
 
 def _cache_key():
-    """Hash AUTH + store count to detect data changes."""
-    sig = f"{len(AUTH)}-{len(STORES)}-{DEMO_AS_OF_DATE}"
+    """Hash data shape + generation params to detect data changes."""
+    sig = (
+        f"{len(AUTH)}-{len(STORES)}-{DEMO_AS_OF_DATE}"
+        f"-{len(SLOW_LEAK)}-{len(NEVER_SCAN_RATES)}-{len(LATE_LAUNCH)}"
+        f"-{sorted(SLOW_LEAK.keys())}"
+    )
     return hashlib.md5(sig.encode()).hexdigest()[:12]
 
 
