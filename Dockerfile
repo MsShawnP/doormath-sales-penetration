@@ -26,6 +26,9 @@ COPY app/ /app/app/
 COPY assets/ /app/assets/
 COPY wsgi.py /app/
 
+# Pre-build parquet cache so cold starts don't block port binding
+RUN python -c "from app.data import SCAN_QUARTERLY, LAST_SCAN; print(f'Cache built: {len(SCAN_QUARTERLY)} quarterly rows, {len(LAST_SCAN)} last-scan rows')"
+
 EXPOSE 8050
 
-CMD ["gunicorn", "wsgi:server", "--bind", "0.0.0.0:8050", "--workers", "2", "--timeout", "120"]
+CMD ["gunicorn", "wsgi:server", "--bind", "0.0.0.0:8050", "--workers", "2", "--timeout", "120", "--preload"]
