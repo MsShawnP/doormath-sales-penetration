@@ -123,6 +123,16 @@ class TestScanData:
         n_weeks = scans["week"].nunique()
         assert n_weeks == 104
 
+    def test_never_scan_gap_exists(self):
+        """Some authorized pairs should have zero scans (authorized but never carried)."""
+        scans = get_scan_data()
+        pair_scan_counts = scans.groupby(["sku_id", "store_id"])["scanned"].sum()
+        never_scanned = (pair_scan_counts == 0).sum()
+        total_pairs = len(pair_scan_counts)
+        never_scan_rate = never_scanned / total_pairs
+        assert never_scan_rate > 0.05, f"Only {never_scan_rate:.1%} never-scan pairs — too few"
+        assert never_scan_rate < 0.40, f"{never_scan_rate:.1%} never-scan pairs — too many"
+
 
 class TestDemoDate:
     def test_demo_as_of_date(self):

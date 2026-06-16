@@ -126,3 +126,21 @@ SCAN_RATES = {
     "B": 0.80,
     "C": 0.70,
 }
+
+# Never-scan base rate by retailer — fraction of authorized pairs that are
+# authorized on paper but never actually carried at the store level.
+# Combined with per-SKU velocity modulation in scans.py.
+NEVER_SCAN_RATES = {
+    "RET-WHOLEFOODS": 0.03,
+    "RET-COSTCO": 0.05,
+    "RET-KROGER": 0.07,
+    "RET-SPROUTS": 0.07,
+    "RET-WALMART": 0.09,
+    "RET-REGIONAL": 0.15,
+}
+
+# SKUs with delayed market entry — no scans before this ISO week
+LATE_LAUNCH = {
+    "CHP-AS-009": "2024-W27",
+    "CHP-SB-006": "2024-W40",
+}

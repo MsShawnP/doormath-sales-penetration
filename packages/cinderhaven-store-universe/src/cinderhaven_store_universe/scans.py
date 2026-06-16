@@ -4,11 +4,19 @@ import numpy as np
 import pandas as pd
 
 from .authorization import get_auth_matrix
-from .constants import SCAN_RATES, SEED
-from .slow_leak import apply_slow_leak
+from .constants import ALL_SKUS, LATE_LAUNCH, NEVER_SCAN_RATES, SCAN_RATES, SEED
+from .slow_leak import SLOW_LEAK_CONFIG, apply_slow_leak
 from .stores import get_stores
 
 _cache: pd.DataFrame | None = None
+
+# Per-SKU shelf velocity — modulates never-scan rate to create item-level variance.
+# Higher velocity = lower effective never-scan rate = higher penetration ceiling.
+# Slow-leak and late-launch SKUs are set to 1.0 so pre-leak penetration stays high.
+_vel_rng = np.random.default_rng(SEED + 200)
+_SKU_VELOCITY = {sku: float(_vel_rng.beta(4, 2)) for sku in ALL_SKUS}
+for _sku in list(SLOW_LEAK_CONFIG.keys()) + list(LATE_LAUNCH.keys()):
+    _SKU_VELOCITY[_sku] = 1.00
 
 
 def _generate_weeks() -> list[str]:
@@ -53,6 +61,23 @@ def get_scan_data() -> pd.DataFrame:
     # Shape: (n_pairs, n_weeks) — each row is one auth pair across all weeks
     random_draws = rng.random((n_pairs, n_weeks))
     scanned_matrix = random_draws < tier_probs[:, np.newaxis]
+
+    # Never-scan pairs: authorized but never carried.
+    # One-time per-pair designation — a store that never carries an item
+    # stays consistently absent across all 104 weeks, not flickering.
+    retailer_base = auth_pairs["retailer_id"].map(NEVER_SCAN_RATES).values
+    sku_vel = np.array([_SKU_VELOCITY[s] for s in auth_pairs["sku_id"].values])
+    effective_never_scan = np.clip(retailer_base / sku_vel, 0.02, 0.50)
+    never_rng = np.random.default_rng(SEED + 300)
+    never_scan_flags = never_rng.random(n_pairs) < effective_never_scan
+    scanned_matrix[never_scan_flags] = False
+
+    # Late-launch SKUs: suppress all scans before their market entry week
+    for late_sku, launch_week in LATE_LAUNCH.items():
+        if launch_week in weeks:
+            launch_idx = weeks.index(launch_week)
+            sku_mask = auth_pairs["sku_id"].values == late_sku
+            scanned_matrix[sku_mask, :launch_idx] = False
 
     # Build the DataFrame using numpy repeat/tile for efficiency
     sku_ids = np.repeat(auth_pairs["sku_id"].values, n_weeks)

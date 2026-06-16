@@ -1,8 +1,14 @@
 """Slow-leak story configuration and data generation.
 
-Two SKUs exhibit declining scan penetration over time:
-- CHP-DG-003: dramatic accelerating decline (85% -> 52%)
-- CHP-SC-007: steady linear decline (72% -> 58%)
+Six SKUs exhibit declining scan penetration over time:
+- CHP-DG-003: dramatic accelerating decline (85% -> 52%) at Regional/Sprouts/Kroger
+- CHP-SC-007: steady linear decline (72% -> 58%) at Regional/Walmart/Sprouts/Kroger
+- CHP-AS-004: moderate decline (93% -> 68%) at Walmart/Regional
+- CHP-PS-006: gradual decline (78% -> 55%) at Sprouts/Kroger
+- CHP-SB-003: sharp delist cascade (92% -> 30%) at Regional/Sprouts/Walmart/Kroger
+- CHP-SB-009: slow fade (92% -> 55%) at Regional/Walmart/Kroger
+
+Whole Foods and Costco are unaffected — they serve as managed-distribution benchmarks.
 """
 
 import numpy as np
@@ -46,7 +52,7 @@ SLOW_LEAK_CONFIG = {
             "RET-SPROUTS",
             "RET-KROGER",
         ],
-        "retailers_stable": ["RET-WALMART", "RET-COSTCO"],
+        "retailers_stable": ["RET-WHOLEFOODS", "RET-WALMART", "RET-COSTCO"],
     },
     "CHP-SC-007": {
         "description": "Steady linear decline — specialty condiment losing traction",
@@ -55,8 +61,58 @@ SLOW_LEAK_CONFIG = {
         "start_penetration": 0.72,
         "end_penetration": 0.58,
         "curve": "linear",
-        "retailers_affected_order": "all",
-        "retailers_stable": [],
+        "retailers_affected_order": [
+            "RET-REGIONAL",
+            "RET-WALMART",
+            "RET-SPROUTS",
+            "RET-KROGER",
+        ],
+        "retailers_stable": ["RET-WHOLEFOODS", "RET-COSTCO"],
+    },
+    "CHP-AS-004": {
+        "description": "Moderate decline at Walmart and Regional — losing shelf space",
+        "start_quarter": "2024-Q3",
+        "end_quarter": "2025-Q4",
+        "start_penetration": 0.93,
+        "end_penetration": 0.68,
+        "curve": "linear",
+        "retailers_affected_order": ["RET-WALMART", "RET-REGIONAL"],
+        "retailers_stable": ["RET-WHOLEFOODS", "RET-COSTCO"],
+    },
+    "CHP-PS-006": {
+        "description": "Gradual decline at Kroger and Sprouts — losing shelf space",
+        "start_quarter": "2024-Q4",
+        "end_quarter": "2025-Q4",
+        "start_penetration": 0.78,
+        "end_penetration": 0.55,
+        "curve": "linear",
+        "retailers_affected_order": ["RET-SPROUTS", "RET-KROGER"],
+        "retailers_stable": ["RET-WHOLEFOODS", "RET-COSTCO"],
+    },
+    "CHP-SB-003": {
+        "description": "Sharp delist cascade — losing doors across most retailers",
+        "start_quarter": "2025-Q1",
+        "end_quarter": "2025-Q3",
+        "start_penetration": 0.92,
+        "end_penetration": 0.30,
+        "curve": "accelerating",
+        "retailers_affected_order": [
+            "RET-REGIONAL",
+            "RET-SPROUTS",
+            "RET-WALMART",
+            "RET-KROGER",
+        ],
+        "retailers_stable": ["RET-WHOLEFOODS", "RET-COSTCO"],
+    },
+    "CHP-SB-009": {
+        "description": "Slow fade across mid-tier retailers — snack losing velocity",
+        "start_quarter": "2025-Q1",
+        "end_quarter": "2025-Q4",
+        "start_penetration": 0.92,
+        "end_penetration": 0.55,
+        "curve": "linear",
+        "retailers_affected_order": ["RET-REGIONAL", "RET-WALMART", "RET-KROGER"],
+        "retailers_stable": ["RET-WHOLEFOODS", "RET-COSTCO"],
     },
 }
 
