@@ -273,6 +273,11 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
         )
     )
 
+    max_total = max((d["authorized_pairs"] for d in bar_data), default=1)
+    gap_positions = [
+        "outside" if g < 0.15 * max_total else "inside" for g in gap_counts
+    ]
+
     fig.add_trace(
         go.Bar(
             y=retailers,
@@ -281,9 +286,10 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
             orientation="h",
             marker=dict(color=DISABLED, opacity=gap_opacity),
             text=[f"{g:,.0f} ({p:.0%} gap)" for g, p in zip(gap_counts, gap_pcts)],
-            textposition="inside",
+            textposition=gap_positions,
             textfont=dict(family=FONT_SANS, size=12, color=INK),
             hoverinfo="skip",
+            cliponaxis=False,
         )
     )
 
@@ -305,7 +311,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
                 tickfont=dict(family=FONT_SANS, size=13, color=INK),
                 automargin=True,
             ),
-            margin=dict(l=120, r=20, t=80, b=40),
+            margin=dict(l=120, r=100, t=80, b=40),
             legend=dict(
                 orientation="h",
                 yanchor="top",

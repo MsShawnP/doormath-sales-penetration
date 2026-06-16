@@ -19,4 +19,5 @@ if __name__ == "__main__":
     from app.app import app
 
     debug = os.environ.get("DASH_DEBUG", "0") == "1"
-    app.run(debug=debug, use_reloader=False, port=8050)
+    port = int(os.environ.get("PORT", 8050))
+    app.run(debug=debug, use_reloader=False, port=port)

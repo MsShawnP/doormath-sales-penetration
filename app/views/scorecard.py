@@ -222,12 +222,20 @@ def _compute_scorecard_data(filters):
         import pandas as pd
 
         ex_df = pd.DataFrame(exception_rows)
+        total_retailers = ex_df["retailer_name"].nunique()
         sku_agg = (
             ex_df.groupby("sku_id")
             .agg(
                 item_name=("item_name", "first"),
                 stores=("store_id", "nunique"),
-                retailers=("retailer_name", lambda x: ", ".join(sorted(x.unique()))),
+                retailers=(
+                    "retailer_name",
+                    lambda x: (
+                        "All retailers"
+                        if x.nunique() == total_retailers
+                        else ", ".join(sorted(x.unique()))
+                    ),
+                ),
                 max_weeks=("weeks_silent", "max"),
             )
             .sort_values("max_weeks", ascending=False)
