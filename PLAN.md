@@ -1,7 +1,7 @@
 # Door Math — Plan
 
 **Tier:** Medium
-**Status:** Active — performance refactor done, 3 visual bugs remain
+**Status:** Active — visual polish complete, 9-item feedback list pending (critical: fix synthetic data generation)
 
 ## Implementation Units (from plan doc)
 

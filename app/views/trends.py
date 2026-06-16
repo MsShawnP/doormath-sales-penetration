@@ -4,6 +4,7 @@ import json
 import statistics
 
 import plotly.graph_objects as go
+from cinderhaven_store_universe.constants import SKU_NAMES
 from dash import Input, Output, State, callback, dcc, html, no_update
 
 from app.calculations import (
@@ -11,7 +12,6 @@ from app.calculations import (
     calc_penetration_rate,
     calc_period_delta,
     calc_tdp,
-    filter_auth,
     quarters_in_range,
 )
 from app.charts import CHART_CONFIG, economist_layout
@@ -19,7 +19,6 @@ from app.components import annotation_callout, dark_callout_card
 from app.constants import (
     FONT_SANS,
     GRIDLINE,
-    INK,
     REFERENCE,
     TEAL_SEQUENTIAL,
     TEXT_SECONDARY,
@@ -143,8 +142,9 @@ def _compute_slow_leak_annotations(filters, quarters):
             addressable = auth_for_sku["store_id"].nunique()
             doors_lost = int(addressable * drop_pp)
 
+            sku_label = SKU_NAMES.get(sku_id, sku_id)
             annotations.append(
-                f"{sku_id} has lost ~{doors_lost} doors across "
+                f"{sku_label} ({sku_id}) has lost ~{doors_lost} doors across "
                 f"{n_quarters} quarter{'s' if n_quarters != 1 else ''} "
                 f"-- penetration down from {fmt_pct(peak_pct)} to "
                 f"{fmt_pct(current_pct)}"
@@ -199,13 +199,10 @@ def _build_acv_chart(acv_data, quarters, selected_point=None):
             go.Scatter(
                 x=quarters,
                 y=[v * 100 for v in values],
-                mode="lines+markers+text",
+                mode="lines+markers",
                 name=name,
                 line=dict(color=color, width=2.5),
                 marker=dict(color=color, size=7),
-                text=[f"{v * 100:.1f}%" for v in values],
-                textposition="top center",
-                textfont=dict(family=FONT_SANS, size=11, color=INK),
                 opacity=opacity,
                 customdata=[ret_id] * len(quarters),
             )
@@ -245,6 +242,48 @@ def _build_acv_chart(acv_data, quarters, selected_point=None):
     return fig
 
 
+def _dodge_overlapping(tdp_data, quarters, threshold=1.0, min_gap=1.0):
+    """Nudge overlapping TDP values apart at each quarter for visual clarity."""
+    nudged = {ret_id: dict(vals) for ret_id, vals in tdp_data.items()}
+
+    # Sort cluster members by mean value across all quarters so the same
+    # retailer always gets the same lane — prevents artificial line crossings.
+    means = {}
+    for ret_id in tdp_data:
+        vals = [tdp_data[ret_id].get(q, 0.0) for q in quarters]
+        means[ret_id] = sum(vals) / len(vals) if vals else 0.0
+
+    for q in quarters:
+        points = [(ret_id, tdp_data[ret_id].get(q, 0.0)) for ret_id in tdp_data]
+        points.sort(key=lambda p: p[1])
+
+        if len(points) < 2:
+            continue
+
+        clusters = []
+        current = [points[0]]
+        for i in range(1, len(points)):
+            if points[i][1] - current[-1][1] <= threshold:
+                current.append(points[i])
+            else:
+                if len(current) > 1:
+                    clusters.append(current)
+                current = [points[i]]
+        if len(current) > 1:
+            clusters.append(current)
+
+        for cluster in clusters:
+            cluster.sort(key=lambda p: means[p[0]])
+            center = sum(p[1] for p in cluster) / len(cluster)
+            n = len(cluster)
+            total_span = (n - 1) * min_gap
+            start = center - total_span / 2
+            for j, (ret_id, _) in enumerate(cluster):
+                nudged[ret_id][q] = round(start + j * min_gap, 2)
+
+    return nudged
+
+
 def _build_tdp_chart(tdp_data, quarters, selected_point=None):
     """Build TDP trend line chart with one line per retailer plus a median reference.
 
@@ -255,7 +294,9 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
     """
     fig = go.Figure()
 
-    # Compute median TDP across retailers per quarter
+    nudged = _dodge_overlapping(tdp_data, quarters)
+
+    # Compute median TDP across retailers per quarter (not dodged)
     medians = []
     for q in quarters:
         vals = [tdp_data[r][q] for r in tdp_data if q in tdp_data[r]]
@@ -277,7 +318,8 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
     for ret_id in sorted(tdp_data.keys()):
         color = RETAILER_COLORS.get(ret_id, TEAL_SEQUENTIAL[0])
         name = _RETAILER_NAMES.get(ret_id, ret_id)
-        values = [tdp_data[ret_id].get(q, 0.0) for q in quarters]
+        true_values = [tdp_data[ret_id].get(q, 0.0) for q in quarters]
+        plot_values = [nudged[ret_id].get(q, 0.0) for q in quarters]
 
         # Dim non-selected retailers when a point is pinned
         opacity = 1.0
@@ -287,16 +329,15 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
         fig.add_trace(
             go.Scatter(
                 x=quarters,
-                y=[round(v, 1) for v in values],
-                mode="lines+markers+text",
+                y=[round(v, 1) for v in plot_values],
+                mode="lines+markers",
                 name=name,
                 line=dict(color=color, width=2.5),
                 marker=dict(color=color, size=7),
-                text=[f"{v:.1f}" for v in values],
-                textposition="top center",
-                textfont=dict(family=FONT_SANS, size=11, color=INK),
                 opacity=opacity,
                 customdata=[ret_id] * len(quarters),
+                text=[f"{v:.1f}" for v in true_values],
+                hovertemplate="%{x}<br>TDP: %{text}<extra>%{fullData.name}</extra>",
             )
         )
 
@@ -316,7 +357,6 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
                 gridwidth=1,
                 showline=False,
                 tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
-                rangemode="tozero",
                 title="TDP points",
             ),
             legend=dict(
@@ -340,31 +380,20 @@ def layout():
     """Return the Trends view component tree."""
     return html.Div(
         [
-            # Side-by-side chart row
             html.Div(
-                [
-                    html.Div(
-                        dcc.Graph(
-                            id="tr-acv-chart",
-                            config=CHART_CONFIG,
-                        ),
-                        style={"flex": "1", "minWidth": "0"},
-                        **{"aria-label": "ACV percent trend by retailer over time"},
-                    ),
-                    html.Div(
-                        dcc.Graph(
-                            id="tr-tdp-chart",
-                            config=CHART_CONFIG,
-                        ),
-                        style={"flex": "1", "minWidth": "0"},
-                        **{"aria-label": "TDP trend by retailer over time"},
-                    ),
-                ],
-                style={
-                    "display": "flex",
-                    "gap": "24px",
-                    "flexWrap": "wrap",
-                },
+                dcc.Graph(
+                    id="tr-acv-chart",
+                    config=CHART_CONFIG,
+                ),
+                **{"aria-label": "ACV percent trend by retailer over time"},
+            ),
+            html.Div(
+                dcc.Graph(
+                    id="tr-tdp-chart",
+                    config=CHART_CONFIG,
+                ),
+                style={"marginTop": "40px"},
+                **{"aria-label": "TDP trend by retailer over time"},
             ),
             # Click-to-pin callout card area
             html.Div(id="tr-callout-area"),

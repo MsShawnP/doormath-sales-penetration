@@ -232,6 +232,36 @@
     outline-offset: 2px;
 }
 
+/* ── Dash 4 accent overrides (replace default purple #7f4bc4) ── */
+
+/* Tab selected indicator — Dash uses border-top, not border-bottom */
+.tab--selected {
+    border-top-color: var(--ll-chicago-20) !important;
+}
+
+/* Dropdown focus/open outline */
+.dash-dropdown:focus,
+.dash-dropdown:focus-visible,
+.dash-dropdown[data-state='open'] {
+    outline-color: var(--ll-chicago-20) !important;
+}
+
+/* Checkbox accent in dropdown options */
+.dash-options-list-option-checkbox {
+    accent-color: var(--ll-chicago-20);
+}
+
+/* Dropdown option hover */
+.dash-options-list-option:hover {
+    background-color: var(--ll-chicago-95);
+}
+
+/* Dropdown width containment */
+.filter-group .dash-dropdown {
+    width: 100%;
+    box-sizing: border-box;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
     * {

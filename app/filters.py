@@ -2,7 +2,7 @@
 
 import json
 
-from cinderhaven_store_universe.constants import PRODUCT_LINES, RETAILERS
+from cinderhaven_store_universe.constants import PRODUCT_LINES, RETAILERS, SKU_NAMES
 from dash import Input, Output, State, callback, dcc, html, no_update
 
 # ── Option lists derived from store universe constants ──
@@ -39,7 +39,7 @@ def _sku_options_for_lines(product_lines):
     for prefix in product_lines:
         if prefix in PRODUCT_LINES:
             for sku in PRODUCT_LINES[prefix]["skus"]:
-                options.append({"label": sku, "value": sku})
+                options.append({"label": SKU_NAMES.get(sku, sku), "value": sku})
     return options
 
 

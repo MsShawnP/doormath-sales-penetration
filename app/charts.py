@@ -35,7 +35,7 @@ def economist_layout(**overrides):
             showline=False,
             tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
         ),
-        margin=dict(l=60, r=20, t=60, b=40),
+        margin=dict(l=60, r=20, t=100, b=40),
         hoverlabel=dict(
             bgcolor=CANVAS,
             font=dict(family=FONT_SANS, size=13, color=INK),

@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Performance refactor complete. All callbacks execute in <0.5s. All 4 tabs render with correct data. Three visual polish bugs remain before redeploy.
+Visual polish in progress. 3 of 6 identified bugs fixed, 2 remaining before redeploy. Position_dodge for TDP trace overlap designed but not yet implemented.
 
 ## What was done (2026-06-15)
 
@@ -43,22 +43,47 @@ Performance refactor complete. All callbacks execute in <0.5s. All 4 tabs render
 - Disabled Werkzeug reloader for local dev (`use_reloader=False`)
 - Verified all 4 tabs render correctly with data via preview tool
 
-## Known visual bugs (from browser QA)
+### Session 5 — Visual polish (2026-06-15)
 
-These three bugs were identified at the end of session 4 and need fixing before redeploy:
+**Fixed:**
+1. **Purple accent on tabs/dropdowns** — Dash 4 uses Radix UI, not React-Select. Added CSS overrides in `assets/style.css` targeting `.tab--selected` (border-top-color), `.dash-dropdown` (outline-color), `.dash-options-list-option-checkbox` (accent-color), `.dash-options-list-option:hover` (background-color). All Chicago Navy.
+2. **Chart legend/title overlap** — Increased default `margin.t` from 60→100 in `app/charts.py` `economist_layout()`. Also set explicit `margin.t=100` on door_count.py retailer and product line charts.
+3. **Layout containment** — Verified at 1440px and 375px, no overflow issues found.
+4. **Legend text truncation on Trends** — Changed trends layout from side-by-side (50% width each) to vertical stack (full width). Each chart now in its own `html.Div` with 40px gap.
+5. **TDP y-axis range** — Removed `rangemode="tozero"` from TDP chart yaxis config so axis auto-scales to actual data range (values vary by tenths around 20-40).
 
-1. **Purple accent on tabs and dropdowns** — Dash default purple is used for the active tab underline and dropdown selection highlights. Should be Chicago Navy (`#1f2e7a`). Fix location: `assets/style.css` — need CSS overrides for `.custom-tab--selected` border/underline color and Dash dropdown `.Select-value` / `.Select-option.is-focused` styles.
+**Not yet fixed:**
+6. **TDP trace overlap** — Whole Foods (39.4) and Kroger (39.2) are 0.2 TDP points apart at Q4 2025, lines/markers paint on top of each other. Diagnosed: within 0.3 pts at every quarter. Solution designed (position_dodge-style visual nudging) but NOT implemented. Click-to-pin callbacks use `customdata`+`x`, never y-value, so nudging plotted y is safe. Callout card re-fetches true values from `tdp_data` dict.
+7. **Product/SKU names are codes** — Store universe `constants.py` only has coded IDs like "CHP-DG-003". User wants realistic names like "Chipotle Lime Mayo". Needs a display name mapping added to the store universe package.
 
-2. **Chart legend overlaps chart title** — On the "Authorized vs Carrying Doors by Retailer" chart, the legend (positioned `y=1.02` above the chart) overlaps or collides with the chart title. Fix location: `app/views/door_count.py` `_build_retailer_chart()` — adjust `margin.t` or legend positioning in the `economist_layout()` call.
+### Session 6 — Visual polish complete + feedback triage (2026-06-16)
 
-3. **Content wrapping / layout issues** — Needs investigation at 1440px and 375px. Possibly the filter bar dropdowns or chart containers not respecting the max-width container.
+**Started from:** 2 bugs remaining — TDP trace overlap, product SKU names as codes.
+
+**Did:**
+- Implemented position_dodge for TDP chart (`_dodge_overlapping()` in trends.py) — mean-based lane assignment prevents line crossings
+- Added 50 realistic SKU display names to store universe constants, surfaced in dropdowns/grid/annotations
+- Cleaned up unused imports (ruff compliance)
+- Received and triaged 9-item feedback from screenshot review; identified critical data generation issue (#1)
+
+**State:** Position dodge and SKU names working. All prior visual bugs fixed. 9-item feedback list identified but not started. CRITICAL: synthetic data has no deliberate authorization gaps — 100% penetration everywhere makes the tool meaningless.
+
+**Next:** Start new session on 9-item feedback list. Priority order:
+1. **[CRITICAL]** Fix synthetic data generation — add deliberate auth gaps, auth-vs-scanning gaps, slow-leak with real variance. Follow data change protocol (list files, describe changes, confirm not touching CINDERHAVEN_CANONICAL.md, wait for approval).
+2. Change hero metric from any-item to SKU-level penetration
+3. Fix exceptions table (remove scroll, fix Group column, fix truncation, add SKU grouping)
+4. Fix legend truncation ("Whole Food" → "Whole Foods")
+5. Verify ACV% lines separate after #1 [DATA ROOT]
+6. Verify charts show meaningful variance after #1 [DATA ROOT]
+7. Add SKU-level drill-down to Door Count view
+8. Add PDF/print export button to Scorecard view
+9. Add narrative annotations to Door Count, Exceptions, and Scorecard views
+10. Redeploy to Fly.io
+11. Run `/ce:review`
 
 ## What's next
 
-1. Fix the 3 visual bugs above
-2. Redeploy to Fly.io (`fly deploy`)
-3. Browser QA at 1440px and 375px
-4. Run `/ce:review` (reviewer ensemble)
+See Session 6 entry above — 9-item feedback list starting with synthetic data fix.
 
 ## Key files
 

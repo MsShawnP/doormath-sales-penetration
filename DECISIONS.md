@@ -60,5 +60,8 @@ Each view module was loading its own copy of ~2M scan rows and processing them p
 **Parquet disk cache for pre-aggregated data.**
 Raw scan aggregation takes 15s. Caching SCAN_QUARTERLY and LAST_SCAN as parquet files in `.cache/` drops warm startup to 1.3s. Cache key is a hash of (AUTH length, STORES length, DEMO_AS_OF_DATE) — changes when the store universe package changes.
 
+**Data change protocol for synthetic data modifications.**
+Before modifying any data generation logic (generator scripts, seed data, schema, constants in the store universe package): (1) list every file that will be touched, (2) describe what is changing and why — which authorization gaps, slow-leak curve numerics, affected SKUs/retailers, (3) explicitly confirm NOT modifying `CINDERHAVEN_CANONICAL.md` or any locked canonical figures, (4) wait for user approval before running the generator. This protocol exists because the store universe feeds all 5 Cinderhaven tools and canonical figures are authoritative — an accidental change propagates silently across tools.
+
 **Disable Werkzeug reloader for local dev.**
 `debug=True` with reloader enabled loads the data module twice (30s+ startup). Disabled reloader for `python wsgi.py` local runs. Production uses gunicorn which doesn't have this issue.

@@ -4,7 +4,7 @@ import json
 
 import dash_ag_grid as dag
 import pandas as pd
-from cinderhaven_store_universe.constants import PRODUCT_LINES
+from cinderhaven_store_universe.constants import SKU_NAMES
 from dash import Input, Output, State, callback, dcc, html, no_update
 
 from app.components import annotation_callout, dark_callout_card
@@ -24,15 +24,6 @@ from app.export import export_csv
 
 _PL_NAMES = PL_NAMES
 
-# Singular names for item name generation
-_PL_SINGULAR = {
-    "AS": "Artisan Sauce",
-    "PS": "Pantry Staple",
-    "SC": "Specialty Condiment",
-    "DG": "Dried Good",
-    "SB": "Snack Bite",
-}
-
 # ── Silence threshold: more than 4 weeks without a scan ──
 SILENCE_THRESHOLD_WEEKS = 4
 
@@ -41,15 +32,8 @@ SILENCE_THRESHOLD_WEEKS = 4
 
 
 def sku_to_item_name(sku_id):
-    """Generate a readable item name from the SKU ID.
-
-    e.g. 'CHP-AS-001' -> 'Artisan Sauce #1'
-    """
-    parts = sku_id.split("-")
-    line_code = parts[1]
-    number = int(parts[2])
-    line_name = _PL_SINGULAR.get(line_code, line_code)
-    return f"{line_name} #{number}"
+    """Look up display name from the store universe SKU_NAMES mapping."""
+    return SKU_NAMES.get(sku_id, sku_id)
 
 
 def sku_to_product_line(sku_id):

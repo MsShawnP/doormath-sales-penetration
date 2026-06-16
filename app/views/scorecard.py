@@ -34,7 +34,7 @@ from app.constants import (
     fmt_number,
     fmt_pct,
 )
-from app.data import AUTH, DEMO_AS_OF_DATE, PL_NAMES, RETAILER_NAMES, SCAN_QUARTERLY
+from app.data import DEMO_AS_OF_DATE, PL_NAMES, RETAILER_NAMES
 from app.views.exceptions import compute_exceptions, sku_to_item_name
 
 _RET_NAMES = RETAILER_NAMES

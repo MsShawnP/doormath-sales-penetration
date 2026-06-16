@@ -45,3 +45,6 @@ desktop.ini
 
 # Claude Code
 .claude/worktrees/
+
+# Chat-Code bridge
+bridge.db

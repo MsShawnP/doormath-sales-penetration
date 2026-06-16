@@ -8,5 +8,11 @@ The scaffold had `app.py` at root and planned to create `app/` as a package. Pyt
 **Callback timeouts from unoptimized scan data (found in browser QA).**
 All 4 view modules loaded their own copy of ~2M weekly scan rows and processed them per callback invocation. On Fly.io (1024MB), callbacks timed out before completing, producing "server did not respond" errors. On the client side this looked like (a) design system not loading (page hung before CSS rendered) and (b) charts empty on filter selection. Root cause was pure performance — not a CSS or filter bug.
 
+**Position dodge per-quarter sort causes artificial line crossings.**
+First implementation of `_dodge_overlapping()` sorted cluster members by their value at each quarter independently. When two retailers' values are close but swap relative position between quarters, they get different lanes at each x-position — creating artificial X-pattern crossings that don't exist in the real data. Fix: sort cluster members by their *mean* value across all quarters, giving each retailer a consistent lane. Lesson: when nudging overlapping data series for visual clarity, stable lane assignment matters more than per-point accuracy.
+
+**Re-exporting SKU_NAMES through app/data.py flagged by ruff F401.**
+Tried to centralize all data imports through `app/data.py` by re-exporting `SKU_NAMES` there. Ruff flagged it as an unused import (F401) because `app/data.py` itself doesn't use the symbol — it only re-exports it. The `__all__` workaround would have been artificial. Fix: consumers import `SKU_NAMES` directly from `cinderhaven_store_universe.constants`, matching the existing pattern in `filters.py`. Lesson: don't force a "single hub" import pattern when the linter enforces used-only imports; follow the existing convention instead.
+
 **pandas merge column collision (retailer_id).**
 `door_count.py` merged AUTH (which has `retailer_id`) with STORE_INFO (also has `retailer_id`) on `store_id`. pandas silently renamed to `retailer_id_x` / `retailer_id_y`. The subsequent `groupby(["retailer_id", ...])` threw KeyError. Fix: only merge `retailer_name` from STORE_INFO since AUTH already has `retailer_id`. Lesson: when merging DataFrames that share column names beyond the join key, be explicit about which columns to pull.

@@ -253,7 +253,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
                 tickfont=dict(family=FONT_SANS, size=13, color=INK),
                 automargin=True,
             ),
-            margin=dict(l=120, r=60, t=60, b=40),
+            margin=dict(l=120, r=60, t=100, b=40),
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
@@ -316,7 +316,7 @@ def _build_product_line_chart(pl_data):
                 tickfont=dict(family=FONT_SANS, size=13, color=INK),
                 automargin=True,
             ),
-            margin=dict(l=160, r=40, t=60, b=40),
+            margin=dict(l=160, r=40, t=100, b=40),
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
