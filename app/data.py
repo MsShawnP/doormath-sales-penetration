@@ -89,5 +89,3 @@ def _load_or_build_aggregates():
 
 
 SCAN_QUARTERLY, LAST_SCAN = _load_or_build_aggregates()
-
-ALL_QUARTERS = [f"Q{q} {y}" for y in (2024, 2025) for q in range(1, 5)]

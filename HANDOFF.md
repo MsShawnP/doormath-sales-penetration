@@ -129,9 +129,27 @@ Visual polish in progress. 3 of 6 identified bugs fixed, 2 remaining before rede
 
 **Next:** Run `/ce:review` (code review ensemble), then `/ce:compound` to extract learnings.
 
+### Session 12 — Code review + all fixes (2026-06-16)
+
+**Started from:** App deployed, all visual polish resolved. Ran `/ce:review`.
+
+**Did:**
+- Code review ensemble (9 agents, 21 findings): 14 safe_auto applied, 7 manual fixes implemented
+- #1 (P1): Input validation on `quarter_to_weeks()` — format, range, year checks
+- #2 (P1): `unfiltered_data_callout()` across all 4 tabs — warns when empty filters default to all data
+- #3 (P2): Warning log in `quarters_in_range()` catch block
+- #14 (P2): `dcc.Loading` spinner on exceptions AG Grid
+- #15 (P2): Median traces in trends charts get legend entries + hovertemplate
+- #16 (P1): Non-blocking PDF via ThreadPoolExecutor + 30s timeout; Dockerfile switched to gthread workers
+- #18 (P2): `batch_acv_by_product_line()` + scorecard rewrite from ~30 queries to ~5 batch ops
+
+**State:** All 122 tests pass, ruff clean. All 21 review findings resolved. Ready to deploy + compound.
+
+**Next:** Deploy with review fixes, then run `/ce:compound` to extract learnings.
+
 ## What's next
 
-1. Run `/ce:review` — code review ensemble
+1. Deploy review fixes to Fly.io
 2. Run `/ce:compound` to extract learnings
 
 ## Key files

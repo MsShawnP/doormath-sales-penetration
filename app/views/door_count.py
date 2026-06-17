@@ -8,9 +8,9 @@ import plotly.graph_objects as go
 from cinderhaven_store_universe.constants import SKU_NAMES
 from dash import Input, Output, State, callback, dcc, html, no_update
 
-from app.calculations import quarters_in_range
+from app.calculations import filter_auth, prior_quarter, quarters_in_range
 from app.charts import CHART_CONFIG, economist_layout
-from app.components import annotation_callout, dark_callout_card
+from app.components import annotation_callout, dark_callout_card, unfiltered_data_callout
 from app.constants import (
     DISABLED,
     FONT_SANS,
@@ -25,40 +25,18 @@ from app.constants import (
     fmt_number,
     fmt_pct,
 )
-from app.data import AUTH, PL_NAMES, SCAN_QUARTERLY, STORE_INFO
-
-# ── Quarter helpers ──
-
-
-def _prior_quarter(quarter_str):
-    """Return the quarter string one quarter before the given quarter."""
-    all_quarters = [f"Q{q} {y}" for y in [2024, 2025] for q in [1, 2, 3, 4]]
-    try:
-        idx = all_quarters.index(quarter_str)
-    except ValueError:
-        return None
-    if idx == 0:
-        return None
-    return all_quarters[idx - 1]
-
+from app.data import PL_NAMES, SCAN_QUARTERLY, STORE_INFO
 
 # ── Data computation helpers ──
 
 
-def _filter_auth(filters):
-    """Filter authorized pairs by filter-state dict."""
-    retailers = filters.get("retailers", [])
-    product_lines = filters.get("product_lines", [])
-    sku = filters.get("sku")
-
-    auth = AUTH[AUTH["authorized"]]
-    if retailers:
-        auth = auth[auth["retailer_id"].isin(retailers)]
-    if product_lines:
-        auth = auth[auth["product_line"].isin(product_lines)]
-    if sku:
-        auth = auth[auth["sku_id"] == sku]
-    return auth
+def _filter_auth_from_dict(filters):
+    """Unpack a filter-state dict and delegate to calculations.filter_auth."""
+    return filter_auth(
+        retailers=filters.get("retailers"),
+        product_lines=filters.get("product_lines"),
+        sku=filters.get("sku"),
+    )
 
 
 def _carrying_scans(auth, quarters):
@@ -206,7 +184,10 @@ def _compute_auth_gaps(auth, quarters):
 
 def _compute_click_detail(auth, quarters, retailer_name):
     """Compute detail card data for a clicked retailer (pair-level)."""
-    ret_row = STORE_INFO[STORE_INFO["retailer_name"] == retailer_name].iloc[0]
+    matching = STORE_INFO[STORE_INFO["retailer_name"] == retailer_name]
+    if matching.empty:
+        return None
+    ret_row = matching.iloc[0]
     ret_id = ret_row["retailer_id"]
 
     ret_auth = auth[auth["retailer_id"] == ret_id]
@@ -274,9 +255,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
     )
 
     max_total = max((d["authorized_pairs"] for d in bar_data), default=1)
-    gap_positions = [
-        "outside" if g < 0.15 * max_total else "inside" for g in gap_counts
-    ]
+    gap_positions = ["outside" if g < 0.15 * max_total else "inside" for g in gap_counts]
 
     fig.add_trace(
         go.Bar(
@@ -478,10 +457,10 @@ def _update_door_count_view(filter_json, active_tab):
 
     end_q = filters.get("end_quarter", "Q4 2025")
     start_q = filters.get("start_quarter", "Q1 2025")
-    prior_q = _prior_quarter(end_q)
+    prior_q = prior_quarter(end_q)
     range_quarters = quarters_in_range(start_q, end_q)
 
-    auth = _filter_auth(filters)
+    auth = _filter_auth_from_dict(filters)
 
     # Hero metric — based on end quarter only
     current_pct, carrying, addressable = _compute_penetration(auth, [end_q])
@@ -539,6 +518,10 @@ def _update_door_count_view(filter_json, active_tab):
     gap_texts = _compute_auth_gaps(auth, [end_q])
     gap_children = [annotation_callout(t) for t in gap_texts] if gap_texts else []
 
+    unfiltered = unfiltered_data_callout(filters)
+    if unfiltered:
+        gap_children.insert(0, unfiltered)
+
     return hero_text, subtitle, trend_text, trend_style, retailer_fig, pl_fig, gap_children
 
 
@@ -580,7 +563,7 @@ def _update_callout_and_dim(pinned_retailer, filter_json):
     start_q = filters.get("start_quarter", "Q1 2025")
     range_quarters = quarters_in_range(start_q, end_q)
 
-    auth = _filter_auth(filters)
+    auth = _filter_auth_from_dict(filters)
     bar_data = _compute_retailer_bars(auth, range_quarters)
 
     if not pinned_retailer:

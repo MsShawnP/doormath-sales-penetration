@@ -1,6 +1,8 @@
 """WeasyPrint PDF generation for the distribution scorecard."""
 
 import os
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeout
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -25,6 +27,9 @@ from app.constants import (
     fmt_number,
     fmt_pct,
 )
+
+_PDF_EXECUTOR = ThreadPoolExecutor(max_workers=1)
+_PDF_TIMEOUT_SECONDS = 30
 
 
 def _get_template_env():
@@ -85,7 +90,10 @@ def generate_scorecard_pdf(data):
     try:
         from weasyprint import HTML
 
-        return HTML(string=html_content).write_pdf()
+        future = _PDF_EXECUTOR.submit(HTML(string=html_content).write_pdf)
+        return future.result(timeout=_PDF_TIMEOUT_SECONDS)
+    except FuturesTimeout:
+        raise RuntimeError(f"PDF generation timed out after {_PDF_TIMEOUT_SECONDS} seconds.")
     except (ImportError, OSError):
         raise RuntimeError(
             "WeasyPrint is not available. On Windows, WeasyPrint requires "

@@ -7,8 +7,16 @@ import pandas as pd
 from cinderhaven_store_universe.constants import SKU_NAMES
 from dash import Input, Output, State, callback, dcc, html, no_update
 
-from app.components import annotation_callout, dark_callout_card
+from app.calculations import filter_auth
+from app.components import (
+    annotation_callout,
+    dark_callout_card,
+    td_style,
+    th_style,
+    unfiltered_data_callout,
+)
 from app.constants import (
+    CANVAS,
     CHICAGO_20,
     FONT_SANS,
     FONT_SERIF,
@@ -19,7 +27,7 @@ from app.constants import (
     WHITE,
     fmt_number,
 )
-from app.data import AUTH, DEMO_AS_OF_DATE, LAST_SCAN, PL_NAMES, STORES
+from app.data import DEMO_AS_OF_DATE, LAST_SCAN, PL_NAMES, STORES
 from app.export import export_csv
 
 _PL_NAMES = PL_NAMES
@@ -76,18 +84,11 @@ def compute_exceptions(filters):
     Returns:
         tuple: (exception_rows as list of dicts, total_authorized_pairs int)
     """
-    retailers = filters.get("retailers", [])
-    product_lines = filters.get("product_lines", [])
-    sku = filters.get("sku")
-
-    auth = AUTH[AUTH["authorized"]]
-    if retailers:
-        auth = auth[auth["retailer_id"].isin(retailers)]
-    if product_lines:
-        auth = auth[auth["product_line"].isin(product_lines)]
-    if sku:
-        auth = auth[auth["sku_id"] == sku]
-
+    auth = filter_auth(
+        retailers=filters.get("retailers"),
+        product_lines=filters.get("product_lines"),
+        sku=filters.get("sku"),
+    )
     total_authorized = len(auth)
 
     if total_authorized == 0:
@@ -99,21 +100,17 @@ def compute_exceptions(filters):
 
     merged = auth_pairs.merge(LAST_SCAN, on=["sku_id", "store_id"], how="left")
 
-    # Compute weeks silent
+    # Compute weeks silent (vectorized)
     demo_week_idx = _demo_as_of_week_index()
     demo_year = demo_week_idx // 100
     demo_week = demo_week_idx % 100
 
-    def _calc_weeks_silent(last_scan_week):
-        if pd.isna(last_scan_week):
-            # Never scanned — count from 2024-W01 to DEMO_AS_OF_DATE = 104 weeks
-            return 104
-        last_idx = _week_to_index(last_scan_week)
-        last_year = last_idx // 100
-        last_week = last_idx % 100
-        return (demo_year - last_year) * 52 + (demo_week - last_week)
-
-    merged["weeks_silent"] = merged["last_scan_week"].apply(_calc_weeks_silent)
+    parts = merged["last_scan_week"].str.split("-W", expand=True)
+    last_year = pd.to_numeric(parts[0], errors="coerce")
+    last_week = pd.to_numeric(parts[1], errors="coerce")
+    merged["weeks_silent"] = (
+        ((demo_year - last_year) * 52 + (demo_week - last_week)).fillna(104).astype(int)
+    )
 
     # Filter to exceptions: weeks_silent > threshold
     exceptions = merged[merged["weeks_silent"] > SILENCE_THRESHOLD_WEEKS].copy()
@@ -275,15 +272,13 @@ def _build_sku_summary(exception_rows):
     header = html.Thead(
         html.Tr(
             [
-                html.Th("Item", style=_th_style()),
-                html.Th("Exceptions", style=_th_style(align="right")),
-                html.Th("Retailers", style=_th_style(align="right")),
-                html.Th("Avg Weeks Silent", style=_th_style(align="right")),
+                html.Th("Item", style=th_style()),
+                html.Th("Exceptions", style=th_style(align="right")),
+                html.Th("Retailers", style=th_style(align="right")),
+                html.Th("Avg Weeks Silent", style=th_style(align="right")),
             ]
         ),
     )
-
-    from app.constants import CANVAS
 
     body_rows = []
     for i, row in summary.iterrows():
@@ -294,19 +289,19 @@ def _build_sku_summary(exception_rows):
                 [
                     html.Td(
                         row["item_name"],
-                        style=_td_style(bg=bg),
+                        style=td_style(bg=bg),
                     ),
                     html.Td(
                         fmt_number(int(row["exceptions"])),
-                        style=_td_style(bg=bg, align="right"),
+                        style=td_style(bg=bg, align="right"),
                     ),
                     html.Td(
                         str(int(row["retailers"])),
-                        style=_td_style(bg=bg, align="right"),
+                        style=td_style(bg=bg, align="right"),
                     ),
                     html.Td(
                         f"{row['avg_weeks']:.0f}",
-                        style=_td_style(bg=bg, align="right", color=weeks_color),
+                        style=td_style(bg=bg, align="right", color=weeks_color),
                     ),
                 ]
             )
@@ -322,33 +317,6 @@ def _build_sku_summary(exception_rows):
             "fontSize": "14px",
         },
     )
-
-
-def _th_style(align="left"):
-    return {
-        "textAlign": align,
-        "padding": "8px 12px",
-        "borderBottom": f"2px solid {INK}",
-        "fontFamily": FONT_SANS,
-        "fontSize": "13px",
-        "fontWeight": "600",
-        "color": INK,
-        "whiteSpace": "nowrap",
-    }
-
-
-def _td_style(bg=WHITE, align="left", color=None):
-    from app.constants import GRIDLINE
-
-    return {
-        "textAlign": align,
-        "padding": "6px 12px",
-        "borderBottom": f"1px solid {GRIDLINE}",
-        "fontFamily": FONT_SANS,
-        "fontSize": "14px",
-        "color": color or INK,
-        "backgroundColor": bg,
-    }
 
 
 # ── Layout ──
@@ -417,29 +385,33 @@ def layout():
                     ),
                 ],
             ),
-            # AG Grid detail table
-            html.Div(
-                dag.AgGrid(
-                    id="ex-grid",
-                    columnDefs=_COLUMN_DEFS,
-                    rowData=[],
-                    defaultColDef={
-                        "sortable": True,
-                        "filter": True,
-                        "resizable": True,
-                    },
-                    dashGridOptions={
-                        "pagination": True,
-                        "paginationPageSize": 50,
-                        "rowSelection": {"mode": "singleRow"},
-                        "animateRows": True,
-                        "domLayout": "autoHeight",
-                        "tooltipShowDelay": 300,
-                    },
-                    style={"width": "100%"},
-                    className="ag-theme-alpine",
+            # AG Grid detail table with loading overlay
+            dcc.Loading(
+                html.Div(
+                    dag.AgGrid(
+                        id="ex-grid",
+                        columnDefs=_COLUMN_DEFS,
+                        rowData=[],
+                        defaultColDef={
+                            "sortable": True,
+                            "filter": True,
+                            "resizable": True,
+                        },
+                        dashGridOptions={
+                            "pagination": True,
+                            "paginationPageSize": 50,
+                            "rowSelection": {"mode": "singleRow"},
+                            "animateRows": True,
+                            "domLayout": "autoHeight",
+                            "tooltipShowDelay": 300,
+                        },
+                        style={"width": "100%"},
+                        className="ag-theme-alpine",
+                    ),
+                    **{"aria-label": "Exception detail — authorized items not scanning"},
                 ),
-                **{"aria-label": "Exception detail — authorized items not scanning"},
+                type="default",
+                color=CHICAGO_20,
             ),
             # Inline detail card (shown on row selection)
             html.Div(id="ex-detail-card"),
@@ -593,6 +565,10 @@ def _update_exceptions_view(filter_json, active_tab):
                         f"exceptions — a concentrated problem worth a targeted fix."
                     )
                 )
+
+    unfiltered = unfiltered_data_callout(filters)
+    if unfiltered:
+        annotations.insert(0, unfiltered)
 
     # SKU summary roll-up
     sku_summary = _build_sku_summary(exception_rows)

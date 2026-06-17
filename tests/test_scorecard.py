@@ -1,9 +1,9 @@
 """Tests for the Scorecard view — layout, data computation, and table structure."""
 
+from app.calculations import prior_quarter
 from app.filters import DEFAULT_FILTER_STATE
 from app.views.scorecard import (
     _compute_scorecard_data,
-    _prior_quarter,
     layout,
 )
 
@@ -180,16 +180,16 @@ class TestScorecardData:
 
 class TestPriorQuarter:
     def test_q4_returns_q3(self):
-        assert _prior_quarter("Q4 2025") == "Q3 2025"
+        assert prior_quarter("Q4 2025") == "Q3 2025"
 
     def test_q1_2025_returns_q4_2024(self):
-        assert _prior_quarter("Q1 2025") == "Q4 2024"
+        assert prior_quarter("Q1 2025") == "Q4 2024"
 
     def test_q1_2024_returns_none(self):
-        assert _prior_quarter("Q1 2024") is None
+        assert prior_quarter("Q1 2024") is None
 
     def test_invalid_quarter_returns_none(self):
-        assert _prior_quarter("Q1 2030") is None
+        assert prior_quarter("Q1 2030") is None
 
 
 # ── Helpers ──

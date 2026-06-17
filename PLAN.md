@@ -1,7 +1,7 @@
 # Door Math — Plan
 
 **Tier:** Medium
-**Status:** Active — Rounds 1–4 visual polish complete. Ready for `/ce:review` then redeploy.
+**Status:** Active — `/ce:review` complete, all findings resolved. Ready for deploy + `/ce:compound`.
 
 ## Implementation Units (from plan doc)
 

@@ -10,9 +10,12 @@ from app.constants import (
     CARD_SUBTITLE,
     CARD_TEXT,
     FAIL_BG,
+    FONT_SANS,
     GRIDLINE,
+    INK,
     RED_42,
     TEXT_SECONDARY,
+    WHITE,
 )
 
 
@@ -122,6 +125,50 @@ def annotation_callout(text):
             "marginTop": "12px",
             "marginBottom": "12px",
         },
+    )
+
+
+def th_style(align="left"):
+    """Inline style dict for table header cells."""
+    return {
+        "textAlign": align,
+        "padding": "8px 12px",
+        "borderBottom": f"2px solid {INK}",
+        "fontFamily": FONT_SANS,
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "color": INK,
+        "whiteSpace": "nowrap",
+    }
+
+
+def td_style(bg=WHITE, align="left", color=None):
+    """Inline style dict for table data cells."""
+    return {
+        "textAlign": align,
+        "padding": "6px 12px",
+        "borderBottom": f"1px solid {GRIDLINE}",
+        "fontFamily": FONT_SANS,
+        "fontSize": "14px",
+        "color": color or INK,
+        "backgroundColor": bg,
+    }
+
+
+def unfiltered_data_callout(filters):
+    """Return a callout when empty filter lists silently default to all data."""
+    retailers = filters.get("retailers")
+    product_lines = filters.get("product_lines")
+    if retailers and product_lines:
+        return None
+    parts = []
+    if not retailers:
+        parts.append("retailers")
+    if not product_lines:
+        parts.append("product lines")
+    return annotation_callout(
+        f"No {' or '.join(parts)} selected — showing all data. "
+        f"Use the filter bar to narrow results."
     )
 
 

@@ -112,14 +112,14 @@ def test_door_count_layout_renders():
 
 def test_hero_metric_valid_percentage():
     """Hero metric computes a valid penetration percentage between 0 and 100%."""
-    from app.views.door_count import _compute_penetration, _filter_auth
+    from app.views.door_count import _compute_penetration, _filter_auth_from_dict
 
     filters = {
         "retailers": [],
         "product_lines": [],
         "sku": None,
     }
-    auth = _filter_auth(filters)
+    auth = _filter_auth_from_dict(filters)
     pct, carrying, addressable = _compute_penetration(auth, ["Q4 2025"])
 
     assert 0.0 <= pct <= 1.0, f"Penetration {pct} out of [0, 1] range"
@@ -131,14 +131,14 @@ def test_hero_metric_valid_percentage():
 def test_retailer_bar_chart_has_correct_groups():
     """Retailer bar chart data has one group per active retailer."""
     from app.calculations import quarters_in_range
-    from app.views.door_count import _compute_retailer_bars, _filter_auth
+    from app.views.door_count import _compute_retailer_bars, _filter_auth_from_dict
 
     filters = {
         "retailers": [],
         "product_lines": [],
         "sku": None,
     }
-    auth = _filter_auth(filters)
+    auth = _filter_auth_from_dict(filters)
     quarters = quarters_in_range("Q1 2025", "Q4 2025")
     bar_data = _compute_retailer_bars(auth, quarters)
 
@@ -169,24 +169,24 @@ def test_quarter_to_weeks():
 
 def test_prior_quarter():
     """_prior_quarter returns the correct preceding quarter."""
-    from app.views.door_count import _prior_quarter
+    from app.calculations import prior_quarter
 
-    assert _prior_quarter("Q4 2025") == "Q3 2025"
-    assert _prior_quarter("Q1 2025") == "Q4 2024"
-    assert _prior_quarter("Q1 2024") is None
+    assert prior_quarter("Q4 2025") == "Q3 2025"
+    assert prior_quarter("Q1 2025") == "Q4 2024"
+    assert prior_quarter("Q1 2024") is None
 
 
 def test_product_line_chart_data():
     """Product line chart data includes all 5 product lines under default filters."""
     from app.calculations import quarters_in_range
-    from app.views.door_count import _compute_product_line_bars, _filter_auth
+    from app.views.door_count import _compute_product_line_bars, _filter_auth_from_dict
 
     filters = {
         "retailers": [],
         "product_lines": [],
         "sku": None,
     }
-    auth = _filter_auth(filters)
+    auth = _filter_auth_from_dict(filters)
     quarters = quarters_in_range("Q1 2025", "Q4 2025")
     pl_data = _compute_product_line_bars(auth, quarters)
 
@@ -196,14 +196,14 @@ def test_product_line_chart_data():
 
 def test_auth_gap_annotations_are_computed():
     """Auth gap annotations produce narrative insights under default filters."""
-    from app.views.door_count import _compute_auth_gaps, _filter_auth
+    from app.views.door_count import _compute_auth_gaps, _filter_auth_from_dict
 
     filters = {
         "retailers": [],
         "product_lines": [],
         "sku": None,
     }
-    auth = _filter_auth(filters)
+    auth = _filter_auth_from_dict(filters)
     annotations = _compute_auth_gaps(auth, ["Q4 2025"])
 
     assert isinstance(annotations, list)

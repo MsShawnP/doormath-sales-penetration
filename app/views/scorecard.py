@@ -11,20 +11,27 @@ from cinderhaven_store_universe.constants import PRODUCT_LINES, RETAILERS
 from dash import Input, Output, State, callback, clientside_callback, dcc, html, no_update
 
 from app.calculations import (
-    calc_acv_pct,
+    batch_acv_by_product_line,
+    batch_acv_by_retailer,
+    batch_tdp_by_retailer,
     calc_penetration_rate,
     calc_period_delta,
-    calc_tdp,
     carrying_in_quarter,
     filter_auth,
+    prior_quarter,
 )
-from app.components import annotation_callout, error_banner
+from app.components import (
+    annotation_callout,
+    error_banner,
+    td_style,
+    th_style,
+    unfiltered_data_callout,
+)
 from app.constants import (
     CANVAS,
     CHICAGO_20,
     FONT_SANS,
     FONT_SERIF,
-    GRIDLINE,
     INK,
     TEXT_SECONDARY,
     TOKYO_40,
@@ -42,26 +49,14 @@ _PL_NAMES = PL_NAMES
 _PL_PREFIXES = list(PRODUCT_LINES.keys())
 
 
-# ── Quarter helpers ──
-
-
-def _prior_quarter(quarter_str):
-    """Return the quarter string one quarter before the given quarter."""
-    all_quarters = [f"Q{q} {y}" for y in [2024, 2025] for q in [1, 2, 3, 4]]
-    try:
-        idx = all_quarters.index(quarter_str)
-    except ValueError:
-        return None
-    if idx == 0:
-        return None
-    return all_quarters[idx - 1]
-
-
 # ── Core data computation ──
 
 
 def _compute_scorecard_data(filters):
     """Compute all data needed for both the screen scorecard and the PDF.
+
+    Uses batch queries instead of per-entity loops — ~5 queries total
+    instead of ~30+.
 
     Returns a dict with keys:
         hero_pct, hero_delta, retailer_rows, product_line_rows,
@@ -71,7 +66,7 @@ def _compute_scorecard_data(filters):
     product_lines = filters.get("product_lines", [])
     sku = filters.get("sku")
     end_q = filters.get("end_quarter", "Q4 2025")
-    prior_q = _prior_quarter(end_q)
+    prior_q = prior_quarter(end_q)
 
     # ── Hero metric ──
     hero_pct = calc_penetration_rate(
@@ -91,128 +86,101 @@ def _compute_scorecard_data(filters):
     else:
         hero_delta = 0.0
 
-    # ── Retailer summary rows ──
-    retailer_rows = []
+    # ── Retailer summary rows (batched) ──
     active_retailers = retailers if retailers else list(RETAILERS.keys())
+    quarters_batch = [end_q] + ([prior_q] if prior_q else [])
+
+    acv_by_ret = batch_acv_by_retailer(quarters_batch, active_retailers, product_lines or None, sku)
+    tdp_by_ret = batch_tdp_by_retailer(quarters_batch, active_retailers, product_lines or None)
+
+    auth_all = filter_auth(retailers=active_retailers, product_lines=product_lines or None, sku=sku)
+    auth_pairs = auth_all[["sku_id", "store_id", "retailer_id"]].drop_duplicates()
+    addr_by_ret = auth_pairs.groupby("retailer_id").size()
+
+    store_ids = set(auth_all["store_id"].unique())
+    sku_ids = set(auth_all["sku_id"].unique())
+    sq_end = carrying_in_quarter(end_q, store_ids, sku_ids)
+    carry_end = sq_end[["sku_id", "store_id", "retailer_id"]].drop_duplicates()
+    carry_by_ret = carry_end.groupby("retailer_id").size()
+
+    carry_prior_by_ret = None
+    if prior_q:
+        sq_prior = carrying_in_quarter(prior_q, store_ids, sku_ids)
+        carry_prior = sq_prior[["sku_id", "store_id", "retailer_id"]].drop_duplicates()
+        carry_prior_by_ret = carry_prior.groupby("retailer_id").size()
+
+    retailer_rows = []
     for ret_id in active_retailers:
-        ret_name = _RET_NAMES.get(ret_id, ret_id)
-        ret_filter = [ret_id]
+        addr = int(addr_by_ret.get(ret_id, 0))
+        carry = int(carry_by_ret.get(ret_id, 0))
+        pen = carry / addr if addr > 0 else 0.0
 
-        pen = calc_penetration_rate(
-            end_q,
-            retailers=ret_filter,
-            product_lines=product_lines or None,
-            sku=sku,
-        )
-        acv = calc_acv_pct(
-            end_q,
-            retailers=ret_filter,
-            product_lines=product_lines or None,
-            sku=sku,
-        )
-        tdp = calc_tdp(
-            end_q,
-            retailers=ret_filter,
-            product_lines=product_lines or None,
-        )
-
-        auth_filtered = filter_auth(
-            retailers=ret_filter,
-            product_lines=product_lines or None,
-            sku=sku,
-        )
-        auth_pairs = auth_filtered[["sku_id", "store_id"]].drop_duplicates()
-        addressable = len(auth_pairs)
-        sq = carrying_in_quarter(
-            end_q,
-            set(auth_filtered["store_id"].unique()),
-            set(auth_filtered["sku_id"].unique()),
-        )
-        carrying = len(sq[["sku_id", "store_id"]].drop_duplicates())
-
-        if prior_q:
-            prior_pen = calc_penetration_rate(
-                prior_q,
-                retailers=ret_filter,
-                product_lines=product_lines or None,
-                sku=sku,
-            )
+        if prior_q and carry_prior_by_ret is not None:
+            prior_carry = int(carry_prior_by_ret.get(ret_id, 0))
+            prior_pen = prior_carry / addr if addr > 0 else 0.0
             delta = calc_period_delta(pen, prior_pen)
         else:
             delta = 0.0
 
         retailer_rows.append(
             {
-                "name": ret_name,
-                "carrying": carrying,
-                "addressable": addressable,
+                "name": _RET_NAMES.get(ret_id, ret_id),
+                "carrying": carry,
+                "addressable": addr,
                 "penetration": pen,
-                "acv_pct": acv,
-                "tdp": tdp,
+                "acv_pct": acv_by_ret.get(ret_id, {}).get(end_q, 0.0),
+                "tdp": tdp_by_ret.get(ret_id, {}).get(end_q, 0.0),
                 "delta": delta,
             }
         )
 
-    # Sort by addressable descending
     retailer_rows.sort(key=lambda r: r["addressable"], reverse=True)
 
-    # ── Product line summary rows ──
-    product_line_rows = []
+    # ── Product line summary rows (batched) ──
     active_pls = product_lines if product_lines else _PL_PREFIXES
+
+    acv_by_pl = batch_acv_by_product_line(quarters_batch, active_pls, retailers or None, sku)
+
+    pl_auth = filter_auth(retailers=retailers or None, product_lines=active_pls, sku=sku)
+    pl_pairs = pl_auth[["sku_id", "store_id", "product_line"]].drop_duplicates()
+    pl_addr = pl_pairs.groupby("product_line").size()
+
+    pl_store_ids = set(pl_auth["store_id"].unique())
+    pl_sku_ids = set(pl_auth["sku_id"].unique())
+    pl_sq = carrying_in_quarter(end_q, pl_store_ids, pl_sku_ids)
+    pl_carry = pl_sq[["sku_id", "store_id", "product_line"]].drop_duplicates()
+    pl_carry_by = pl_carry.groupby("product_line").size()
+
+    pl_carry_prior_by = None
+    if prior_q:
+        pl_sq_prior = carrying_in_quarter(prior_q, pl_store_ids, pl_sku_ids)
+        pl_carry_p = pl_sq_prior[["sku_id", "store_id", "product_line"]].drop_duplicates()
+        pl_carry_prior_by = pl_carry_p.groupby("product_line").size()
+
+    product_line_rows = []
     for pl_prefix in active_pls:
-        pl_name = _PL_NAMES.get(pl_prefix, pl_prefix)
-        pl_filter = [pl_prefix]
+        addr = int(pl_addr.get(pl_prefix, 0))
+        carry = int(pl_carry_by.get(pl_prefix, 0))
+        pen = carry / addr if addr > 0 else 0.0
 
-        pen = calc_penetration_rate(
-            end_q,
-            retailers=retailers or None,
-            product_lines=pl_filter,
-            sku=sku,
-        )
-        acv = calc_acv_pct(
-            end_q,
-            retailers=retailers or None,
-            product_lines=pl_filter,
-            sku=sku,
-        )
-
-        auth_filtered = filter_auth(
-            retailers=retailers or None,
-            product_lines=pl_filter,
-            sku=sku,
-        )
-        auth_pairs = auth_filtered[["sku_id", "store_id"]].drop_duplicates()
-        addressable = len(auth_pairs)
-        sq = carrying_in_quarter(
-            end_q,
-            set(auth_filtered["store_id"].unique()),
-            set(auth_filtered["sku_id"].unique()),
-        )
-        carrying = len(sq[["sku_id", "store_id"]].drop_duplicates())
-
-        if prior_q:
-            prior_pen = calc_penetration_rate(
-                prior_q,
-                retailers=retailers or None,
-                product_lines=pl_filter,
-                sku=sku,
-            )
+        if prior_q and pl_carry_prior_by is not None:
+            prior_carry = int(pl_carry_prior_by.get(pl_prefix, 0))
+            prior_pen = prior_carry / addr if addr > 0 else 0.0
             delta = calc_period_delta(pen, prior_pen)
         else:
             delta = 0.0
 
         product_line_rows.append(
             {
-                "name": pl_name,
-                "carrying": carrying,
-                "addressable": addressable,
+                "name": _PL_NAMES.get(pl_prefix, pl_prefix),
+                "carrying": carry,
+                "addressable": addr,
                 "penetration": pen,
-                "acv_pct": acv,
+                "acv_pct": acv_by_pl.get(pl_prefix, {}).get(end_q, 0.0),
                 "delta": delta,
             }
         )
 
-    # Sort by addressable descending
     product_line_rows.sort(key=lambda r: r["addressable"], reverse=True)
 
     # ── Top exceptions (one row per SKU, aggregated across stores) ──
@@ -274,12 +242,12 @@ def _build_retailer_table(rows):
     header = html.Thead(
         html.Tr(
             [
-                html.Th("Retailer", style=_th_style()),
-                html.Th("Scanning / Authorized", style=_th_style()),
-                html.Th("Penetration %", style=_th_style(align="right")),
-                html.Th("ACV%", style=_th_style(align="right")),
-                html.Th("TDP", style=_th_style(align="right")),
-                html.Th("Δ vs Prior Qtr", style=_th_style(align="right")),
+                html.Th("Retailer", style=th_style()),
+                html.Th("Scanning / Authorized", style=th_style()),
+                html.Th("Penetration %", style=th_style(align="right")),
+                html.Th("ACV%", style=th_style(align="right")),
+                html.Th("TDP", style=th_style(align="right")),
+                html.Th("Δ vs Prior Qtr", style=th_style(align="right")),
             ]
         ),
     )
@@ -296,17 +264,17 @@ def _build_retailer_table(rows):
         body_rows.append(
             html.Tr(
                 [
-                    html.Td(row["name"], style=_td_style(bg=bg)),
+                    html.Td(row["name"], style=td_style(bg=bg)),
                     html.Td(
                         f"{fmt_number(row['carrying'])} / {fmt_number(row['addressable'])}",
-                        style=_td_style(bg=bg),
+                        style=td_style(bg=bg),
                     ),
-                    html.Td(fmt_pct(row["penetration"]), style=_td_style(bg=bg, align="right")),
-                    html.Td(fmt_pct(row["acv_pct"]), style=_td_style(bg=bg, align="right")),
-                    html.Td(f"{row['tdp']:.1f}", style=_td_style(bg=bg, align="right")),
+                    html.Td(fmt_pct(row["penetration"]), style=td_style(bg=bg, align="right")),
+                    html.Td(fmt_pct(row["acv_pct"]), style=td_style(bg=bg, align="right")),
+                    html.Td(f"{row['tdp']:.1f}", style=td_style(bg=bg, align="right")),
                     html.Td(
                         delta_text,
-                        style=_td_style(bg=bg, align="right", color=delta_color),
+                        style=td_style(bg=bg, align="right", color=delta_color),
                     ),
                 ]
             )
@@ -329,11 +297,11 @@ def _build_product_line_table(rows):
     header = html.Thead(
         html.Tr(
             [
-                html.Th("Product Line", style=_th_style()),
-                html.Th("Scanning / Authorized", style=_th_style()),
-                html.Th("Penetration %", style=_th_style(align="right")),
-                html.Th("ACV%", style=_th_style(align="right")),
-                html.Th("Δ vs Prior Qtr", style=_th_style(align="right")),
+                html.Th("Product Line", style=th_style()),
+                html.Th("Scanning / Authorized", style=th_style()),
+                html.Th("Penetration %", style=th_style(align="right")),
+                html.Th("ACV%", style=th_style(align="right")),
+                html.Th("Δ vs Prior Qtr", style=th_style(align="right")),
             ]
         ),
     )
@@ -350,16 +318,16 @@ def _build_product_line_table(rows):
         body_rows.append(
             html.Tr(
                 [
-                    html.Td(row["name"], style=_td_style(bg=bg)),
+                    html.Td(row["name"], style=td_style(bg=bg)),
                     html.Td(
                         f"{fmt_number(row['carrying'])} / {fmt_number(row['addressable'])}",
-                        style=_td_style(bg=bg),
+                        style=td_style(bg=bg),
                     ),
-                    html.Td(fmt_pct(row["penetration"]), style=_td_style(bg=bg, align="right")),
-                    html.Td(fmt_pct(row["acv_pct"]), style=_td_style(bg=bg, align="right")),
+                    html.Td(fmt_pct(row["penetration"]), style=td_style(bg=bg, align="right")),
+                    html.Td(fmt_pct(row["acv_pct"]), style=td_style(bg=bg, align="right")),
                     html.Td(
                         delta_text,
-                        style=_td_style(bg=bg, align="right", color=delta_color),
+                        style=td_style(bg=bg, align="right", color=delta_color),
                     ),
                 ]
             )
@@ -393,10 +361,10 @@ def _build_exceptions_list(exceptions):
     header = html.Thead(
         html.Tr(
             [
-                html.Th("Item Name", style=_th_style()),
-                html.Th("Retailers", style=_th_style()),
-                html.Th("Stores", style=_th_style(align="right")),
-                html.Th("Max Weeks Silent", style=_th_style(align="right")),
+                html.Th("Item Name", style=th_style()),
+                html.Th("Retailers", style=th_style()),
+                html.Th("Stores", style=th_style(align="right")),
+                html.Th("Max Weeks Silent", style=th_style(align="right")),
             ]
         ),
     )
@@ -408,15 +376,15 @@ def _build_exceptions_list(exceptions):
         body_rows.append(
             html.Tr(
                 [
-                    html.Td(exc["item_name"], style=_td_style(bg=bg)),
-                    html.Td(exc.get("retailer", ""), style=_td_style(bg=bg)),
+                    html.Td(exc["item_name"], style=td_style(bg=bg)),
+                    html.Td(exc.get("retailer", ""), style=td_style(bg=bg)),
                     html.Td(
                         fmt_number(exc.get("stores", 0)),
-                        style=_td_style(bg=bg, align="right"),
+                        style=td_style(bg=bg, align="right"),
                     ),
                     html.Td(
                         str(exc["weeks_silent"]),
-                        style=_td_style(bg=bg, align="right", color=weeks_color),
+                        style=td_style(bg=bg, align="right", color=weeks_color),
                     ),
                 ]
             )
@@ -432,37 +400,6 @@ def _build_exceptions_list(exceptions):
             "fontSize": "14px",
         },
     )
-
-
-# ── Style helpers ──
-
-
-def _th_style(align="left"):
-    """Return inline style dict for table header cells."""
-    return {
-        "textAlign": align,
-        "padding": "8px 12px",
-        "borderBottom": f"2px solid {INK}",
-        "fontFamily": FONT_SANS,
-        "fontSize": "13px",
-        "fontWeight": "600",
-        "color": INK,
-        "whiteSpace": "nowrap",
-    }
-
-
-def _td_style(bg=WHITE, align="left", color=None):
-    """Return inline style dict for table data cells."""
-    style = {
-        "textAlign": align,
-        "padding": "6px 12px",
-        "borderBottom": f"1px solid {GRIDLINE}",
-        "fontFamily": FONT_SANS,
-        "fontSize": "14px",
-        "color": color or INK,
-        "backgroundColor": bg,
-    }
-    return style
 
 
 # ── Layout ──
@@ -664,6 +601,9 @@ def _update_scorecard(filter_json, active_tab):
 
     # Annotations
     annotations = []
+    unfiltered = unfiltered_data_callout(filters)
+    if unfiltered:
+        annotations.append(unfiltered)
 
     if data["retailer_rows"]:
         widest = max(data["retailer_rows"], key=lambda r: r["addressable"] - r["carrying"])

@@ -235,27 +235,9 @@ def apply_slow_leak(scan_df: pd.DataFrame) -> pd.DataFrame:
             for i in range(remainder):
                 drops_per_quarter[i] += 1
 
-        # Progressively silence stores
+        # Progressively silence stores: for each quarter, pick stores to drop
+        # and suppress ALL their scans from that quarter onward.
         silenced_stores: set[str] = set()
-        drop_idx = 0
-
-        for qi, quarter in enumerate(quarters):
-            q_start_sort, _ = _get_quarter_weeks(quarter)
-            n_drop = drops_per_quarter[qi]
-
-            # Pick stores to silence this quarter
-            new_silenced = []
-            while len(new_silenced) < n_drop and drop_idx < len(affected_stores):
-                store = affected_stores[drop_idx]
-                drop_idx += 1
-                if store not in silenced_stores:
-                    new_silenced.append(store)
-                    silenced_stores.add(store)
-
-        # After computing all silenced stores per quarter, apply suppression
-        # in one pass: for each store, suppress from the quarter it was silenced onward
-        # Rebuild the suppression by tracking when each store was silenced
-        silenced_stores_reset: set[str] = set()
         drop_idx = 0
 
         for qi, quarter in enumerate(quarters):
@@ -266,9 +248,9 @@ def apply_slow_leak(scan_df: pd.DataFrame) -> pd.DataFrame:
             while len(newly_silenced) < n_drop and drop_idx < len(affected_stores):
                 store = affected_stores[drop_idx]
                 drop_idx += 1
-                if store not in silenced_stores_reset:
+                if store not in silenced_stores:
                     newly_silenced.append(store)
-                    silenced_stores_reset.add(store)
+                    silenced_stores.add(store)
 
             # For newly silenced stores, suppress ALL scans from this quarter onward
             if newly_silenced:

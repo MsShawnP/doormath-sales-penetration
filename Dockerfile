@@ -31,4 +31,4 @@ RUN python -c "from app.data import SCAN_QUARTERLY, LAST_SCAN; print(f'Cache bui
 
 EXPOSE 8050
 
-CMD ["gunicorn", "wsgi:server", "--bind", "0.0.0.0:8050", "--workers", "1", "--timeout", "120", "--preload"]
+CMD ["gunicorn", "wsgi:server", "--bind", "0.0.0.0:8050", "--workers", "1", "--worker-class", "gthread", "--threads", "2", "--timeout", "120", "--preload"]

@@ -15,7 +15,7 @@ from app.calculations import (
     quarters_in_range,
 )
 from app.charts import CHART_CONFIG, economist_layout
-from app.components import annotation_callout, dark_callout_card
+from app.components import annotation_callout, dark_callout_card, unfiltered_data_callout
 from app.constants import (
     FONT_SANS,
     GRIDLINE,
@@ -189,7 +189,8 @@ def _build_acv_chart(acv_data, quarters, selected_point=None):
             mode="lines",
             name="Median",
             line=dict(color=REFERENCE, dash="dash", width=2),
-            hoverinfo="skip",
+            showlegend=True,
+            hovertemplate="Median: %{y:.1f}%<extra></extra>",
         )
     )
 
@@ -326,7 +327,8 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
             mode="lines",
             name="Median",
             line=dict(color=REFERENCE, dash="dash", width=2),
-            hoverinfo="skip",
+            showlegend=True,
+            hovertemplate="Median: %{y:.1f} pts<extra></extra>",
         )
     )
 
@@ -464,6 +466,10 @@ def _update_trends_charts(filter_json, active_tab):
     # Slow-leak annotations
     leak_texts = _compute_slow_leak_annotations(filters, quarters)
     leak_children = [annotation_callout(t) for t in leak_texts] if leak_texts else []
+
+    unfiltered = unfiltered_data_callout(filters)
+    if unfiltered:
+        leak_children.insert(0, unfiltered)
 
     return acv_fig, tdp_fig, leak_children
 

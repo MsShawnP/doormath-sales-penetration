@@ -4,7 +4,11 @@ Uses pre-aggregated quarterly scan data from app.data for performance.
 All time-relative computations use DEMO_AS_OF_DATE -- never wall-clock time.
 """
 
+import logging
+
 from app.data import AUTH, SCAN_QUARTERLY, STORE_INFO
+
+logger = logging.getLogger(__name__)
 
 
 def quarter_to_weeks(quarter_str):
@@ -12,9 +16,19 @@ def quarter_to_weeks(quarter_str):
 
     Quarter boundaries: Q1=W01-W13, Q2=W14-W26, Q3=W27-W39, Q4=W40-W52.
     """
-    q, year = quarter_str.split()
-    q_num = int(q[1])
-    year = int(year)
+    parts = quarter_str.split()
+    if len(parts) != 2:
+        raise ValueError(f"Invalid quarter format: {quarter_str!r} — expected 'Qn YYYY'")
+    q_label, year_str = parts
+    if len(q_label) != 2 or q_label[0] != "Q" or not q_label[1:].isdigit():
+        raise ValueError(f"Invalid quarter format: {quarter_str!r} — expected 'Qn YYYY'")
+    q_num = int(q_label[1])
+    if not 1 <= q_num <= 4:
+        raise ValueError(f"Invalid quarter number Q{q_num} — expected Q1–Q4")
+    try:
+        year = int(year_str)
+    except ValueError:
+        raise ValueError(f"Invalid year in quarter: {quarter_str!r}") from None
     start_week = (q_num - 1) * 13 + 1
     end_week = q_num * 13
     return [f"{year}-W{w:02d}" for w in range(start_week, end_week + 1)]
@@ -30,8 +44,25 @@ def quarters_in_range(start_quarter, end_quarter):
         start_idx = all_quarters.index(start_quarter)
         end_idx = all_quarters.index(end_quarter)
     except ValueError:
+        logger.warning(
+            "quarters_in_range: %r or %r not in known quarters — returning empty list",
+            start_quarter,
+            end_quarter,
+        )
         return []
     return all_quarters[start_idx : end_idx + 1]
+
+
+def prior_quarter(quarter_str):
+    """Return the quarter string one quarter before the given quarter."""
+    all_quarters = [f"Q{q} {y}" for y in [2024, 2025] for q in [1, 2, 3, 4]]
+    try:
+        idx = all_quarters.index(quarter_str)
+    except ValueError:
+        return None
+    if idx == 0:
+        return None
+    return all_quarters[idx - 1]
 
 
 def filter_auth(retailers=None, product_lines=None, sku=None):
@@ -180,9 +211,11 @@ def batch_tdp_by_retailer(quarters, retailers, product_lines=None):
     )
     addressable_ids = set(auth["store_id"].unique())
 
-    denom = store_weights.loc[
-        store_weights["store_id"].isin(addressable_ids)
-    ].groupby("retailer_id")["weight"].sum()
+    denom = (
+        store_weights.loc[store_weights["store_id"].isin(addressable_ids)]
+        .groupby("retailer_id")["weight"]
+        .sum()
+    )
 
     sku_ids = set(auth["sku_id"].unique())
     sq = SCAN_QUARTERLY[
@@ -201,6 +234,41 @@ def batch_tdp_by_retailer(quarters, retailers, product_lines=None):
         for q in quarters:
             n = tdp_by_ret_q.get((r, q), 0)
             result[r][q] = (n / d) if d > 0 else 0.0
+    return result
+
+
+def batch_acv_by_product_line(quarters, product_lines, retailers=None, sku=None):
+    """Compute ACV% for every (product_line, quarter) pair in one pass.
+
+    Returns dict: {product_line_prefix: {quarter_str: float}}.
+    """
+    auth = filter_auth(retailers=retailers, product_lines=product_lines, sku=sku)
+    if auth.empty:
+        return {pl: {q: 0.0 for q in quarters} for pl in product_lines}
+
+    store_weights = STORE_INFO[["store_id", "weight"]].drop_duplicates(subset=["store_id"])
+    auth_pairs = auth[["sku_id", "store_id", "product_line"]].drop_duplicates()
+    auth_w = auth_pairs.merge(store_weights, on="store_id", how="left")
+
+    denom = auth_w.groupby("product_line")["weight"].sum()
+
+    store_ids = set(auth["store_id"].unique())
+    sku_ids = set(auth["sku_id"].unique())
+    sq = SCAN_QUARTERLY[
+        SCAN_QUARTERLY["quarter"].isin(quarters)
+        & SCAN_QUARTERLY["store_id"].isin(store_ids)
+        & SCAN_QUARTERLY["sku_id"].isin(sku_ids)
+    ].drop_duplicates(subset=["sku_id", "store_id", "quarter"])
+
+    numer = sq.groupby(["product_line", "quarter"])["weight"].sum()
+
+    result = {}
+    for pl in product_lines:
+        result[pl] = {}
+        d = denom.get(pl, 0)
+        for q in quarters:
+            n = numer.get((pl, q), 0)
+            result[pl][q] = (n / d) if d > 0 else 0.0
     return result
 
 

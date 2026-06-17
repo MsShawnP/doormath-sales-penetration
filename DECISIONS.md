@@ -79,3 +79,14 @@ Raw exception rows showed the same SKU repeated per-store (e.g. CHP-AS-001 × 10
 
 **Annotation accent bar uses GRIDLINE, not CARD_BG.**
 The `annotation_callout()` component inline-styled the left border with `CARD_BG` (#1a1a1a, dark card background) instead of `GRIDLINE` (#d9d9d9, London-85). Corrected to match the design system's insight-line specification.
+
+## 2026-06-16 — Code review fixes
+
+**Batch scorecard computation (batch_acv_by_product_line + existing batch functions).**
+Scorecard `_compute_scorecard_data()` was calling `calc_acv_pct` and `calc_tdp` per retailer (6×) and per product line (5×), plus `filter_auth` and `carrying_in_quarter` per entity — ~30 individual queries per render. Replaced with `batch_acv_by_retailer` + `batch_tdp_by_retailer` + new `batch_acv_by_product_line` + single `filter_auth` + groupby — ~5 queries total. This extends the batch pattern established in Session 10 for trends.
+
+**Unfiltered data callout pattern.**
+When `retailers=[]` or `product_lines=[]`, `filter_auth` treats empty lists as "no filter" and returns all data. Rather than changing `filter_auth` semantics (which would break existing callers), added `unfiltered_data_callout()` in `components.py` that detects empty filter lists and shows an informational annotation. Applied to all 4 tabs.
+
+**Non-blocking PDF generation with ThreadPoolExecutor.**
+WeasyPrint PDF rendering is CPU-bound and blocks the Gunicorn worker thread. Two-pronged fix: (1) switched Dockerfile from sync workers to `gthread` with 2 threads (threads share memory, no extra cost on 1024MB VM), (2) wrapped `HTML(string=...).write_pdf()` in a ThreadPoolExecutor with 30s timeout for defense-in-depth. The executor has `max_workers=1` since concurrent PDF renders would OOM.
