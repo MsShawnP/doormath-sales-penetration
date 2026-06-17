@@ -21,8 +21,9 @@ from app.calculations import (
     prior_quarter,
 )
 from app.components import (
-    annotation_callout,
     error_banner,
+    stat_card,
+    stat_card_row,
     td_style,
     th_style,
     unfiltered_data_callout,
@@ -441,6 +442,8 @@ def layout():
                     "marginBottom": "24px",
                 },
             ),
+            # Headline insight cards (visible without scrolling)
+            html.Div(id="sc-headline-cards"),
             # Retailer summary table
             html.Div(
                 [
@@ -551,6 +554,7 @@ def layout():
     Output("sc-hero-pct", "children"),
     Output("sc-hero-trend", "children"),
     Output("sc-hero-trend", "style"),
+    Output("sc-headline-cards", "children"),
     Output("sc-retailer-table", "children"),
     Output("sc-product-line-table", "children"),
     Output("sc-exceptions-list", "children"),
@@ -561,7 +565,16 @@ def layout():
 def _update_scorecard(filter_json, active_tab):
     """Recompute all scorecard elements when filters change."""
     if active_tab != "scorecard":
-        return no_update, no_update, no_update, no_update, no_update, no_update, no_update
+        return (
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+        )
     filters = json.loads(filter_json) if filter_json else {}
     data = _compute_scorecard_data(filters)
 
@@ -599,59 +612,65 @@ def _update_scorecard(filter_json, active_tab):
     product_line_table = _build_product_line_table(data["product_line_rows"])
     exceptions_list = _build_exceptions_list(data["top_exceptions"])
 
-    # Annotations
+    # Headline insight cards (above tables, no scroll needed)
+    headline_cards = []
+    if data["retailer_rows"]:
+        widest = max(data["retailer_rows"], key=lambda r: r["addressable"] - r["carrying"])
+        gap = widest["addressable"] - widest["carrying"]
+        if gap > 0:
+            gap_pct = 1 - widest["penetration"]
+            headline_cards.append(
+                stat_card(
+                    f"{gap_pct * 100:.0f}%",
+                    f"widest gap — {widest['name']}. {fmt_number(gap)} pairs not scanning.",
+                )
+            )
+    if data["product_line_rows"]:
+        weakest = min(data["product_line_rows"], key=lambda r: r["penetration"])
+        if weakest["penetration"] < 0.95:
+            headline_cards.append(
+                stat_card(
+                    fmt_pct(weakest["penetration"]),
+                    f"lowest penetration — {weakest['name']}",
+                )
+            )
+    headline = stat_card_row(headline_cards) if headline_cards else []
+
+    # Bottom annotations as stat cards
     annotations = []
     unfiltered = unfiltered_data_callout(filters)
     if unfiltered:
         annotations.append(unfiltered)
 
-    if data["retailer_rows"]:
-        widest = max(data["retailer_rows"], key=lambda r: r["addressable"] - r["carrying"])
-        gap = widest["addressable"] - widest["carrying"]
-        if gap > 0:
-            annotations.append(
-                annotation_callout(
-                    f"{widest['name']} has the widest gap: {fmt_number(gap)} authorized "
-                    f"pairs not scanning ({fmt_pct(widest['penetration'])} penetration) "
-                    f"— the biggest opportunity for field-level recovery."
-                )
-            )
-
-    if data["product_line_rows"]:
-        weakest = min(data["product_line_rows"], key=lambda r: r["penetration"])
-        if weakest["penetration"] < 0.95:
-            annotations.append(
-                annotation_callout(
-                    f"{weakest['name']} has the lowest penetration at "
-                    f"{fmt_pct(weakest['penetration'])} — the portfolio's "
-                    f"weakest link in shelf presence."
-                )
-            )
-
+    bottom_cards = []
     if data["retailer_rows"]:
         declining = [r for r in data["retailer_rows"] if r["delta"] < -0.02]
         if declining:
             names = ", ".join(r["name"] for r in declining[:3])
-            annotations.append(
-                annotation_callout(
-                    f"Quarter-over-quarter declines at {names} — investigate "
-                    f"whether these are seasonal or early signs of distribution loss."
+            bottom_cards.append(
+                stat_card(
+                    str(len(declining)),
+                    f"retailers declining QoQ — {names}",
                 )
             )
 
     if data["top_exceptions"]:
         worst = data["top_exceptions"][0]
-        annotations.append(
-            annotation_callout(
-                f"Longest silence: {worst['item_name']} at {worst['retailer']} "
-                f"({worst['weeks_silent']} weeks) — authorized but not scanning."
+        bottom_cards.append(
+            stat_card(
+                f"{worst['weeks_silent']} wks",
+                f"longest silence — {worst['item_name']} at {worst['retailer']}",
             )
         )
+
+    if bottom_cards:
+        annotations.append(stat_card_row(bottom_cards))
 
     return (
         hero_text,
         trend_text,
         trend_style,
+        headline,
         retailer_table,
         product_line_table,
         exceptions_list,

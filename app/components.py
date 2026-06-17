@@ -11,6 +11,7 @@ from app.constants import (
     CARD_TEXT,
     FAIL_BG,
     FONT_SANS,
+    FONT_SERIF,
     GRIDLINE,
     INK,
     RED_42,
@@ -97,6 +98,58 @@ def dark_callout_card(title, subtitle=None, rows=None):
             "padding": "20px 24px",
             "borderRadius": "2px",
             "marginTop": "16px",
+        },
+    )
+
+
+def stat_card(value, label):
+    """Big-number stat card — large metric with context label beneath."""
+    return html.Div(
+        [
+            html.Div(
+                value,
+                style={
+                    "fontFamily": FONT_SERIF,
+                    "fontSize": "36px",
+                    "fontWeight": "700",
+                    "color": INK,
+                    "letterSpacing": "-0.02em",
+                    "lineHeight": "1",
+                },
+            ),
+            html.P(
+                label,
+                style={
+                    "fontFamily": FONT_SANS,
+                    "fontSize": "14px",
+                    "color": TEXT_SECONDARY,
+                    "marginTop": "8px",
+                    "lineHeight": "1.4",
+                    "margin": "8px 0 0 0",
+                },
+            ),
+        ],
+        className="stat-card",
+        style={
+            "flex": "1",
+            "minWidth": "180px",
+            "padding": "20px 24px",
+            "borderLeft": f"3px solid {GRIDLINE}",
+        },
+    )
+
+
+def stat_card_row(cards):
+    """Horizontal row of stat cards, wrapping on narrow viewports."""
+    return html.Div(
+        cards,
+        className="stat-card-row",
+        style={
+            "display": "flex",
+            "gap": "16px",
+            "flexWrap": "wrap",
+            "marginTop": "16px",
+            "marginBottom": "24px",
         },
     )
 

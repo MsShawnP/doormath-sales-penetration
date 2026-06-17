@@ -209,4 +209,6 @@ def test_auth_gap_annotations_are_computed():
     assert isinstance(annotations, list)
     assert len(annotations) >= 1
     for a in annotations:
-        assert isinstance(a, str)
+        assert isinstance(a, dict)
+        assert "value" in a
+        assert "label" in a

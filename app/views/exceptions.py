@@ -9,8 +9,9 @@ from dash import Input, Output, State, callback, dcc, html, no_update
 
 from app.calculations import filter_auth
 from app.components import (
-    annotation_callout,
     dark_callout_card,
+    stat_card,
+    stat_card_row,
     td_style,
     th_style,
     unfiltered_data_callout,
@@ -532,26 +533,30 @@ def _update_exceptions_view(filter_json, active_tab):
             ),
         )
 
-    # Annotation callouts
+    # Stat card annotations
     annotations = []
+    unfiltered = unfiltered_data_callout(filters)
+    if unfiltered:
+        annotations.append(unfiltered)
+
+    insight_cards = []
     if stats["exception_pct"] > 0.10:
         pct_display = f"{stats['exception_pct'] * 100:.1f}%"
-        annotations.append(
-            annotation_callout(
-                f"{fmt_number(stats['total_exceptions'])} of "
-                f"{fmt_number(total_authorized)} authorized item-store pairs "
-                f"({pct_display}) haven't scanned recently — distribution "
-                f"gaps may be widening."
+        insight_cards.append(
+            stat_card(
+                pct_display,
+                f"of authorized pairs not scanning — "
+                f"{fmt_number(stats['total_exceptions'])} of {fmt_number(total_authorized)}",
             )
         )
 
     if exception_rows:
         never_count = sum(1 for r in exception_rows if r.get("last_scan_date") == "Never")
         if never_count > 0:
-            annotations.append(
-                annotation_callout(
-                    f"{fmt_number(never_count)} item-store pairs have never scanned "
-                    f"— these authorizations may exist on paper only."
+            insight_cards.append(
+                stat_card(
+                    fmt_number(never_count),
+                    "pairs never scanned — authorizations on paper only",
                 )
             )
 
@@ -559,16 +564,15 @@ def _update_exceptions_view(filter_json, active_tab):
             top_name, top_count = stats["top_retailers"][0]
             top_share = top_count / stats["total_exceptions"]
             if top_share > 0.30:
-                annotations.append(
-                    annotation_callout(
-                        f"{top_name} accounts for {top_share * 100:.0f}% of all "
-                        f"exceptions — a concentrated problem worth a targeted fix."
+                insight_cards.append(
+                    stat_card(
+                        f"{top_share * 100:.0f}%",
+                        f"of exceptions concentrated at {top_name}",
                     )
                 )
 
-    unfiltered = unfiltered_data_callout(filters)
-    if unfiltered:
-        annotations.insert(0, unfiltered)
+    if insight_cards:
+        annotations.append(stat_card_row(insight_cards))
 
     # SKU summary roll-up
     sku_summary = _build_sku_summary(exception_rows)

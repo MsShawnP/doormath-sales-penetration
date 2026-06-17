@@ -15,7 +15,12 @@ from app.calculations import (
     quarters_in_range,
 )
 from app.charts import CHART_CONFIG, economist_layout
-from app.components import annotation_callout, dark_callout_card, unfiltered_data_callout
+from app.components import (
+    dark_callout_card,
+    stat_card,
+    stat_card_row,
+    unfiltered_data_callout,
+)
 from app.constants import (
     FONT_SANS,
     GRIDLINE,
@@ -32,7 +37,7 @@ _RETAILER_IDS_SORTED = sorted(RETAILER_NAMES.keys())
 
 # Assign one teal color per retailer, evenly spaced across the 8-shade palette.
 # 6 retailers, 8 teal shades -- pick indices [0, 1, 2, 4, 5, 7] for contrast.
-_RETAILER_COLOR_INDICES = [0, 1, 2, 4, 5, 7]
+_RETAILER_COLOR_INDICES = [0, 1, 2, 4, 5, 6]
 RETAILER_COLORS = {}
 for i, ret_id in enumerate(_RETAILER_IDS_SORTED):
     idx = (
@@ -77,28 +82,25 @@ def _compute_tdp_by_retailer(filters, quarters):
 
 
 def _compute_slow_leak_annotations(filters, quarters):
-    """Check slow-leak SKUs and return annotation strings for significant drops.
+    """Check slow-leak SKUs and return stat card data for significant drops.
 
     A significant drop is >20 percentage points from peak penetration.
+    Returns list of dicts with 'value' and 'label' keys.
     """
     product_lines = filters.get("product_lines", [])
     sku = filters.get("sku")
     retailers = filters.get("retailers", [])
 
-    annotations = []
+    cards = []
 
     for sku_id, config in SLOW_LEAK.items():
-        # Extract product line prefix from sku_id (e.g. CHP-DG-003 -> DG)
         sku_prefix = sku_id.split("-")[1]
 
-        # Only annotate if the product line is visible in current filters
         if product_lines and sku_prefix not in product_lines:
             continue
-        # If a specific SKU is selected and it's not this one, skip
         if sku and sku != sku_id:
             continue
 
-        # Compute penetration trend across quarters for this SKU
         penetration_by_q = {}
         for q in quarters:
             penetration_by_q[q] = calc_penetration_rate(
@@ -115,17 +117,14 @@ def _compute_slow_leak_annotations(filters, quarters):
         current_pct = penetration_by_q[quarters[-1]] if quarters else 0.0
         drop_pp = peak_pct - current_pct
 
-        # Significant drop: >20 percentage points from peak
         if drop_pp > 0.20:
             peak_q = [q for q, v in penetration_by_q.items() if v == peak_pct][0]
-            # Count quarters from peak to current
             try:
                 peak_idx = quarters.index(peak_q)
                 n_quarters = len(quarters) - 1 - peak_idx
             except ValueError:
                 n_quarters = 0
 
-            # Estimate doors lost: use addressable stores for this SKU
             auth_for_sku = AUTH[(AUTH["authorized"]) & (AUTH["sku_id"] == sku_id)]
             if retailers:
                 auth_for_sku = auth_for_sku[auth_for_sku["retailer_id"].isin(retailers)]
@@ -133,14 +132,18 @@ def _compute_slow_leak_annotations(filters, quarters):
             doors_lost = int(addressable * drop_pp)
 
             sku_label = SKU_NAMES.get(sku_id, sku_id)
-            annotations.append(
-                f"{sku_label} ({sku_id}) has lost ~{doors_lost} doors across "
-                f"{n_quarters} quarter{'s' if n_quarters != 1 else ''} "
-                f"-- penetration down from {fmt_pct(peak_pct)} to "
-                f"{fmt_pct(current_pct)}"
+            cards.append(
+                {
+                    "value": f"~{doors_lost}",
+                    "label": (
+                        f"doors lost — {sku_label} over "
+                        f"{n_quarters} quarter{'s' if n_quarters != 1 else ''}. "
+                        f"Down from {fmt_pct(peak_pct)} to {fmt_pct(current_pct)}."
+                    ),
+                }
             )
 
-    return annotations
+    return cards
 
 
 # -- Chart builders --
@@ -463,13 +466,14 @@ def _update_trends_charts(filter_json, active_tab):
     acv_fig = _build_acv_chart(acv_data, quarters)
     tdp_fig = _build_tdp_chart(tdp_data, quarters)
 
-    # Slow-leak annotations
-    leak_texts = _compute_slow_leak_annotations(filters, quarters)
-    leak_children = [annotation_callout(t) for t in leak_texts] if leak_texts else []
-
+    # Slow-leak stat cards
+    leak_cards = _compute_slow_leak_annotations(filters, quarters)
+    leak_children = []
     unfiltered = unfiltered_data_callout(filters)
     if unfiltered:
-        leak_children.insert(0, unfiltered)
+        leak_children.append(unfiltered)
+    if leak_cards:
+        leak_children.append(stat_card_row([stat_card(c["value"], c["label"]) for c in leak_cards]))
 
     return acv_fig, tdp_fig, leak_children
 

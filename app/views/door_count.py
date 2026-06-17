@@ -10,7 +10,12 @@ from dash import Input, Output, State, callback, dcc, html, no_update
 
 from app.calculations import filter_auth, prior_quarter, quarters_in_range
 from app.charts import CHART_CONFIG, economist_layout
-from app.components import annotation_callout, dark_callout_card, unfiltered_data_callout
+from app.components import (
+    dark_callout_card,
+    stat_card,
+    stat_card_row,
+    unfiltered_data_callout,
+)
 from app.constants import (
     DISABLED,
     FONT_SANS,
@@ -123,7 +128,10 @@ def _compute_product_line_bars(auth, quarters):
 
 
 def _compute_auth_gaps(auth, quarters):
-    """Find retailers where authorized pairs not scanning exceeds 15%."""
+    """Find retailers where authorized pairs not scanning exceeds 15%.
+
+    Returns a list of dicts with 'value' and 'label' keys for stat cards.
+    """
     ret_names = STORE_INFO[["store_id", "retailer_name"]].drop_duplicates()
     auth_ret = auth.merge(ret_names, on="store_id", how="left")
 
@@ -148,38 +156,45 @@ def _compute_auth_gaps(auth, quarters):
     merged["gap"] = merged["authorized_pairs"] - merged["carrying_pairs"]
     merged["gap_pct"] = merged["gap"] / merged["authorized_pairs"]
 
-    annotations = []
+    cards = []
 
     if merged.empty:
-        return annotations
+        return cards
 
     best = merged.loc[merged["gap_pct"].idxmin()]
     worst = merged.loc[merged["gap_pct"].idxmax()]
 
-    if best["gap_pct"] < 0.05 and len(merged) > 1:
-        best_pct = (1 - best["gap_pct"]) * 100
-        annotations.append(
-            f"{best['retailer_name']} leads at {best_pct:.0f}% pair coverage — "
-            f"a model for what full execution looks like."
+    if worst["gap_pct"] > 0.20 and len(merged) > 1:
+        worst_pct = worst["gap_pct"] * 100
+        cards.append(
+            {
+                "value": f"{worst_pct:.0f}%",
+                "label": (
+                    f"widest distribution gap — {worst['retailer_name']}. Prioritize field visits."
+                ),
+            }
         )
 
     for _, row in merged[merged["gap_pct"] > 0.10].iterrows():
         gap = int(row["gap"])
-        auth_ct = int(row["authorized_pairs"])
         name = row["retailer_name"]
-        annotations.append(
-            f"{name}: {gap} of {auth_ct} authorized item-store pairs haven't "
-            f"scanned recently — the shelf says no even though the buyer said yes."
+        cards.append(
+            {
+                "value": fmt_number(gap),
+                "label": f"authorized pairs not scanning — {name}",
+            }
         )
 
-    if worst["gap_pct"] > 0.20 and len(merged) > 1:
-        worst_pct = worst["gap_pct"] * 100
-        annotations.append(
-            f"{worst['retailer_name']} has the widest distribution gap at "
-            f"{worst_pct:.0f}% — prioritize field visits here."
+    if best["gap_pct"] < 0.05 and len(merged) > 1:
+        best_pct = (1 - best["gap_pct"]) * 100
+        cards.append(
+            {
+                "value": f"{best_pct:.0f}%",
+                "label": f"pair coverage leader — {best['retailer_name']}",
+            }
         )
 
-    return annotations
+    return cards
 
 
 def _compute_click_detail(auth, quarters, retailer_name):
@@ -255,7 +270,6 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
     )
 
     max_total = max((d["authorized_pairs"] for d in bar_data), default=1)
-    gap_positions = ["outside" if g < 0.15 * max_total else "inside" for g in gap_counts]
 
     fig.add_trace(
         go.Bar(
@@ -264,13 +278,35 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
             name="Not scanning (gap)",
             orientation="h",
             marker=dict(color=DISABLED, opacity=gap_opacity),
-            text=[f"{g:,.0f} ({p:.0%} gap)" for g, p in zip(gap_counts, gap_pcts)],
-            textposition=gap_positions,
-            textfont=dict(family=FONT_SANS, size=12, color=INK),
             hoverinfo="skip",
-            cliponaxis=False,
         )
     )
+
+    for i, (gap, gap_pct) in enumerate(zip(gap_counts, gap_pcts)):
+        if gap <= 0:
+            continue
+        label = f"{gap:,.0f} ({gap_pct:.0%} gap)"
+        total = scan_counts[i] + gap
+        if gap >= 0.15 * max_total:
+            fig.add_annotation(
+                x=scan_counts[i] + gap / 2,
+                y=retailers[i],
+                text=label,
+                showarrow=False,
+                font=dict(family=FONT_SANS, size=12, color=INK),
+                xanchor="center",
+                yanchor="middle",
+            )
+        else:
+            fig.add_annotation(
+                x=total,
+                y=retailers[i],
+                text=f"  {label}",
+                showarrow=False,
+                font=dict(family=FONT_SANS, size=12, color=INK),
+                xanchor="left",
+                yanchor="middle",
+            )
 
     fig.update_layout(
         **economist_layout(
@@ -309,7 +345,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
 
 
 def _build_product_line_chart(pl_data):
-    """Build a stacked horizontal bar chart: scanning pairs by product line and retailer."""
+    """Build a grouped horizontal bar chart: scanning pairs by product line and retailer."""
     if not pl_data:
         return go.Figure()
 
@@ -332,15 +368,17 @@ def _build_product_line_chart(pl_data):
                 orientation="h",
                 marker=dict(color=color),
                 text=[fmt_number(v) if v > 0 else "" for v in values],
-                textposition="inside",
-                textfont=dict(family=FONT_SANS, size=12, color=WHITE),
+                textposition="outside",
+                textfont=dict(family=FONT_SANS, size=11, color=INK),
+                cliponaxis=False,
+                constraintext="none",
                 hoverinfo="skip",
             )
         )
 
     fig.update_layout(
         **economist_layout(
-            barmode="stack",
+            barmode="group",
             title=dict(text="Scanning Pairs by Product Line"),
             xaxis=dict(
                 showgrid=True,
@@ -356,18 +394,18 @@ def _build_product_line_chart(pl_data):
                 tickfont=dict(family=FONT_SANS, size=13, color=INK),
                 automargin=True,
             ),
-            margin=dict(l=160, r=40, t=80, b=60),
+            margin=dict(l=160, r=80, t=80, b=60),
             legend=dict(
                 orientation="h",
                 yanchor="top",
-                y=-0.15,
+                y=-0.10,
                 xanchor="left",
                 x=0,
                 font=dict(family=FONT_SANS, size=12),
                 entrywidthmode="fraction",
                 entrywidth=0.16,
             ),
-            height=max(300, len(product_lines) * 50 + 140),
+            height=max(400, len(product_lines) * 120 + 140),
         )
     )
 
@@ -514,13 +552,14 @@ def _update_door_count_view(filter_json, active_tab):
     pl_data = _compute_product_line_bars(auth, range_quarters)
     pl_fig = _build_product_line_chart(pl_data)
 
-    # Auth gap annotations — based on end quarter
-    gap_texts = _compute_auth_gaps(auth, [end_q])
-    gap_children = [annotation_callout(t) for t in gap_texts] if gap_texts else []
-
+    # Auth gap stat cards — based on end quarter
+    gap_cards = _compute_auth_gaps(auth, [end_q])
+    gap_children = []
     unfiltered = unfiltered_data_callout(filters)
     if unfiltered:
-        gap_children.insert(0, unfiltered)
+        gap_children.append(unfiltered)
+    if gap_cards:
+        gap_children.append(stat_card_row([stat_card(c["value"], c["label"]) for c in gap_cards]))
 
     return hero_text, subtitle, trend_text, trend_style, retailer_fig, pl_fig, gap_children
 

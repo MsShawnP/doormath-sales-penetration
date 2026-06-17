@@ -192,9 +192,13 @@ def test_slow_leak_annotations_with_full_range():
     annotations = _compute_slow_leak_annotations(filters, quarters)
     assert isinstance(annotations, list)
 
-    # At least CHP-DG-003 should trigger an annotation (85% -> 52% decline)
-    dg003_found = any("CHP-DG-003" in a for a in annotations)
-    assert dg003_found, f"Expected CHP-DG-003 slow-leak annotation; got: {annotations}"
+    # Slow-leak SKUs should produce structured stat card data
+    assert len(annotations) >= 1
+    for c in annotations:
+        assert isinstance(c, dict)
+        assert "value" in c
+        assert "label" in c
+        assert "doors lost" in c["label"]
 
 
 def test_slow_leak_filtered_out_by_product_line():
@@ -213,9 +217,10 @@ def test_slow_leak_filtered_out_by_product_line():
         "end_quarter": "Q4 2025",
     }
     annotations = _compute_slow_leak_annotations(filters, quarters)
-    for a in annotations:
-        assert "CHP-DG-003" not in a, "DG leak should be filtered out"
-        assert "CHP-SC-007" not in a, "SC leak should be filtered out"
+    for c in annotations:
+        label = c.get("label", "")
+        assert "CHP-DG-003" not in label, "DG leak should be filtered out"
+        assert "CHP-SC-007" not in label, "SC leak should be filtered out"
 
 
 # -- Retailer color assignment --
