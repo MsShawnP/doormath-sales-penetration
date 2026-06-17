@@ -1,7 +1,7 @@
 # Door Math — Plan
 
 **Tier:** Medium
-**Status:** Active — `/ce:review` complete, all findings resolved. Ready for deploy + `/ce:compound`.
+**Status:** Active — Prospect readiness done. Custom domain pending cert. Deploy + `/ce:compound` next.
 
 ## Implementation Units (from plan doc)
 

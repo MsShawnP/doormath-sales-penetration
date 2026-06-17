@@ -147,10 +147,26 @@ Visual polish in progress. 3 of 6 identified bugs fixed, 2 remaining before rede
 
 **Next:** Deploy with review fixes, then run `/ce:compound` to extract learnings.
 
+### Session 13 — Prospect readiness (2026-06-16)
+
+**Started from:** Code review complete, all findings resolved. Tool functionally complete but needed prospect-facing framing.
+
+**Did:**
+- Added intro section above tabs: H1 "Distribution Penetration Tracker" + one-paragraph Cinderhaven/synthetic data explanation
+- Fixed filter dropdown truncation: CSS overlay shows "All retailers" / "All product lines" when all are selected, hides individual chips via `:has()` selector + Dash className callback
+- Set up `doormath.lailarallc.com` custom domain: CNAME + ACME challenge in Cloudflare, Fly.io cert added (validation pending DNS propagation)
+- Identified portfolio card needs adding to lailarallc.com `/work` page (separate repo)
+
+**State:** Intro + filter fix verified in preview (122 tests pass, ruff clean). Custom domain DNS records created, cert validating. Portfolio card not yet added (separate repo at `C:\Users\mssha\projects\reference\lailara-website`).
+
+**Next:** Verify `doormath.lailarallc.com` cert issued. Add portfolio card to lailarallc.com. Deploy review fixes + prospect readiness changes to Fly.io. Run `/ce:compound`.
+
 ## What's next
 
-1. Deploy review fixes to Fly.io
-2. Run `/ce:compound` to extract learnings
+1. Verify `doormath.lailarallc.com` cert issued (`fly certs check doormath.lailarallc.com -a doormath-sales-penetration`)
+2. Add portfolio card to lailarallc.com `/work` page (in `lailara-website` repo, `engagements` array in `site/src/app/work/page.tsx`)
+3. Deploy to Fly.io (`fly deploy`)
+4. Run `/ce:compound` to extract learnings
 
 ## Key files
 

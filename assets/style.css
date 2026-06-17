@@ -1,6 +1,29 @@
 /* Door Math — project-specific overrides only.
    Design tokens live in lailara-frame.css (do not duplicate). */
 
+/* Tool intro — prospect orientation above tabs */
+.tool-intro {
+    margin-bottom: var(--ll-space-lg);
+}
+
+.tool-intro h1 {
+    font-family: var(--ll-serif);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ll-london-20);
+    margin: 0 0 6px 0;
+    line-height: 1.3;
+}
+
+.tool-intro p {
+    font-family: var(--ll-sans);
+    font-size: 15px;
+    color: var(--ll-london-35);
+    line-height: 1.6;
+    max-width: 660px;
+    margin: 0;
+}
+
 /* Tab styling */
 .custom-tabs {
     border-bottom: 2px solid var(--ll-london-85);
@@ -185,6 +208,8 @@
 
 /* Mobile responsive */
 @media (max-width: 640px) {
+    .tool-intro h1 { font-size: 16px; }
+
     .hero-number { font-size: 44px; }
     .hero-subtext { font-size: 15px; }
     .hero-trend { font-size: 15px; }
@@ -329,6 +354,34 @@ select:focus {
 .filter-group .dash-dropdown {
     width: 100%;
     box-sizing: border-box;
+}
+
+/* Filter summary — "All retailers" / "All product lines" overlay */
+.dropdown-wrap {
+    position: relative;
+}
+
+.filter-summary {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 10px;
+    display: none;
+    align-items: center;
+    font-family: var(--ll-sans);
+    font-size: 14px;
+    color: var(--ll-london-20);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.dropdown-wrap:has(.all-selected) .filter-summary {
+    display: flex;
+}
+
+.all-selected .dash-dropdown-value,
+.all-selected .dash-dropdown-value-count {
+    display: none !important;
 }
 
 /* Reduced motion */

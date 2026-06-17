@@ -19,6 +19,22 @@ TAB_LABELS = ["Door Count", "Trends", "Exceptions", "Scorecard"]
 TAB_IDS = ["door-count", "trends", "exceptions", "scorecard"]
 
 
+def _build_intro():
+    """Brief orientation for cold visitors above the tab bar."""
+    return html.Div(
+        [
+            html.H1("Distribution Penetration Tracker"),
+            html.P(
+                "Monitoring which stores are actually carrying your products "
+                "versus which were authorized. Built on synthetic data from "
+                "Cinderhaven, a fictional $25M specialty food brand, to "
+                "demonstrate the analytics without exposing client data."
+            ),
+        ],
+        className="tool-intro",
+    )
+
+
 def _build_tabs():
     """Build the dcc.Tabs component with 4 tabs."""
     return dcc.Tabs(
@@ -56,6 +72,7 @@ def register_layout():
             ),
             html.Div(
                 [
+                    _build_intro(),
                     _build_tabs(),
                     build_filter_bar(),
                     build_empty_state(),

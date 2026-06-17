@@ -56,13 +56,23 @@ def build_filter_bar():
             html.Div(
                 [
                     html.Label("Retailer"),
-                    dcc.Dropdown(
-                        id="filter-retailer",
-                        options=RETAILER_OPTIONS,
-                        value=ALL_RETAILER_IDS,
-                        multi=True,
-                        placeholder="Select retailers...",
-                        clearable=False,
+                    html.Div(
+                        [
+                            dcc.Dropdown(
+                                id="filter-retailer",
+                                options=RETAILER_OPTIONS,
+                                value=ALL_RETAILER_IDS,
+                                multi=True,
+                                placeholder="Select retailers...",
+                                clearable=False,
+                            ),
+                            html.Span(
+                                "All retailers",
+                                id="retailer-summary",
+                                className="filter-summary",
+                            ),
+                        ],
+                        className="dropdown-wrap",
                     ),
                 ],
                 className="filter-group",
@@ -71,13 +81,23 @@ def build_filter_bar():
             html.Div(
                 [
                     html.Label("Product Line"),
-                    dcc.Dropdown(
-                        id="filter-product-line",
-                        options=PRODUCT_LINE_OPTIONS,
-                        value=ALL_PRODUCT_LINE_PREFIXES,
-                        multi=True,
-                        placeholder="Select product lines...",
-                        clearable=False,
+                    html.Div(
+                        [
+                            dcc.Dropdown(
+                                id="filter-product-line",
+                                options=PRODUCT_LINE_OPTIONS,
+                                value=ALL_PRODUCT_LINE_PREFIXES,
+                                multi=True,
+                                placeholder="Select product lines...",
+                                clearable=False,
+                            ),
+                            html.Span(
+                                "All product lines",
+                                id="product-line-summary",
+                                className="filter-summary",
+                            ),
+                        ],
+                        className="dropdown-wrap",
                     ),
                 ],
                 className="filter-group",
@@ -198,6 +218,24 @@ def register_filter_callbacks():
                 "end_quarter": end_q,
             }
         )
+
+    @callback(
+        Output("filter-retailer", "className"),
+        Input("filter-retailer", "value"),
+    )
+    def _retailer_summary_class(value):
+        if value and len(value) == len(ALL_RETAILER_IDS):
+            return "all-selected"
+        return ""
+
+    @callback(
+        Output("filter-product-line", "className"),
+        Input("filter-product-line", "value"),
+    )
+    def _product_line_summary_class(value):
+        if value and len(value) == len(ALL_PRODUCT_LINE_PREFIXES):
+            return "all-selected"
+        return ""
 
     @callback(
         Output("filter-retailer", "value"),
