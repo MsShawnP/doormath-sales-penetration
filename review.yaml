@@ -1,0 +1,42 @@
+project: doormath-sales-penetration
+base_url: https://doormath.lailarallc.com
+
+routes:
+  - path: /
+    name: Door Count (default tab)
+
+forbidden_content:
+  - pattern: "TODO|FIXME|HACK|XXX"
+    severity: warning
+    reason: Dev markers in production code
+  - pattern: "password\\s*=|api_key\\s*=|secret\\s*="
+    severity: fail
+    reason: Possible hardcoded credentials
+    exclude:
+      - "*.md"
+
+dom_checks:
+  - route: /
+    elements:
+      - selector: ".lailara-header"
+        label: Brand header present
+      - selector: ".lailara-footer"
+        label: Brand footer present
+      - selector: ".tool-intro h1"
+        label: Intro heading present
+      - selector: ".custom-tabs"
+        label: Tab navigation present
+      - selector: "#dc-hero-pct"
+        label: Door Count hero metric rendered
+      - selector: "#dc-retailer-chart .js-plotly-plot"
+        label: Retailer gap chart rendered
+      - selector: "#dc-product-line-chart .js-plotly-plot"
+        label: Product line chart rendered
+    absent:
+      - selector: ".dash-error"
+        label: No Dash error state shown
+
+layout:
+  - route: /
+    assertions:
+      - type: no_horizontal_scroll

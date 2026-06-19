@@ -161,12 +161,25 @@ Visual polish in progress. 3 of 6 identified bugs fixed, 2 remaining before rede
 
 **Next:** Verify `doormath.lailarallc.com` cert issued. Add portfolio card to lailarallc.com. Deploy review fixes + prospect readiness changes to Fly.io. Run `/ce:compound`.
 
+### Session 14 — UI review + layout fixes + deploy (2026-06-19)
+
+**Started from:** Visual polish round committed but not deployed (v5 stale by 3 commits). UI review identified 3 actionable layout issues.
+
+**Did:**
+- Diagnosed intro heading missing on live site as stale deployment (v5 didn't include `9190ca4`)
+- Fixed filter bar 37px overflow — Dash internal `.dash-dropdown-focus-target` renders at 177px inside 140px groups; added `overflow: hidden` to `.filter-group` and constrained `.filter-summary` with `right: 30px` + text-overflow ellipsis
+- Container 13px overflow resolved as side effect of filter fix
+- Deployed to Fly.io (v6), verified all 3 items via ui-review tool (8 pass, 16 noise failures from Plotly SVG labels)
+
+**State:** App deployed at v6. All layout issues resolved. 122 tests pass, ruff clean. Custom domain cert status unknown.
+
+**Next:** Run `/ce:compound` to extract learnings. Verify `doormath.lailarallc.com` cert. Add portfolio card to lailarallc.com.
+
 ## What's next
 
-1. Verify `doormath.lailarallc.com` cert issued (`fly certs check doormath.lailarallc.com -a doormath-sales-penetration`)
-2. Add portfolio card to lailarallc.com `/work` page (in `lailara-website` repo, `engagements` array in `site/src/app/work/page.tsx`)
-3. Deploy to Fly.io (`fly deploy`)
-4. Run `/ce:compound` to extract learnings
+1. Run `/ce:compound` to extract learnings
+2. Verify `doormath.lailarallc.com` cert issued (`fly certs check doormath.lailarallc.com -a doormath-sales-penetration`)
+3. Add portfolio card to lailarallc.com `/work` page (in `lailara-website` repo, `engagements` array in `site/src/app/work/page.tsx`)
 
 ## Key files
 

@@ -69,6 +69,7 @@
     flex-direction: column;
     gap: var(--ll-space-xs);
     min-width: 180px;
+    overflow: hidden;
 }
 
 .filter-group label {
@@ -359,6 +360,7 @@ select:focus {
 /* Filter summary — "All retailers" / "All product lines" overlay */
 .dropdown-wrap {
     position: relative;
+    overflow: hidden;
 }
 
 .filter-summary {
@@ -366,6 +368,7 @@ select:focus {
     top: 0;
     bottom: 0;
     left: 10px;
+    right: 30px;
     display: none;
     align-items: center;
     font-family: var(--ll-sans);
@@ -373,6 +376,9 @@ select:focus {
     color: var(--ll-london-20);
     pointer-events: none;
     z-index: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .dropdown-wrap:has(.all-selected) .filter-summary {
