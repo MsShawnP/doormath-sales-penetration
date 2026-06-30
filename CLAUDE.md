@@ -29,3 +29,5 @@ No dash-bootstrap-components — lailara-frame.css is the design system.
 - "Retailer" not "banner" — consistent terminology throughout
 - All charts: Economist style, SVG-based, horizontal gridlines only, text labels on every data point
 - Click-to-pin interactions (not hover tooltips) per Lailara design system
+
+Never write secrets, tokens, or passwords into tracked files, READMEs, or commit messages — use environment variables and secret stores only.

@@ -48,3 +48,8 @@ desktop.ini
 
 # Chat-Code bridge
 bridge.db
+
+# Security - secret leak prevention
+.env.*
+*.pem
+secrets.*
