@@ -12,17 +12,16 @@ from app.calculations import filter_auth, prior_quarter, quarters_in_range
 from app.charts import CHART_CONFIG, economist_layout
 from app.components import (
     dark_callout_card,
-    stat_card,
-    stat_card_row,
     unfiltered_data_callout,
 )
 from app.constants import (
+    CATEGORICAL_6,
     DISABLED,
     FONT_SANS,
+    FONT_SERIF,
     GRIDLINE,
     INK,
     SCAN_BAR,
-    TEAL_SEQUENTIAL,
     TEXT_SECONDARY,
     TREND_DOWN,
     TREND_UP,
@@ -127,11 +126,8 @@ def _compute_product_line_bars(auth, quarters):
     return result
 
 
-def _compute_auth_gaps(auth, quarters):
-    """Find retailers where authorized pairs not scanning exceeds 15%.
-
-    Returns a list of dicts with 'value' and 'label' keys for stat cards.
-    """
+def _compute_retailer_gaps(auth, quarters):
+    """Compute per-retailer gap data — one entry per retailer, sorted by gap descending."""
     ret_names = STORE_INFO[["store_id", "retailer_name"]].drop_duplicates()
     auth_ret = auth.merge(ret_names, on="store_id", how="left")
 
@@ -155,46 +151,87 @@ def _compute_auth_gaps(auth, quarters):
     merged["carrying_pairs"] = merged["carrying_pairs"].fillna(0).astype(int)
     merged["gap"] = merged["authorized_pairs"] - merged["carrying_pairs"]
     merged["gap_pct"] = merged["gap"] / merged["authorized_pairs"]
-
-    cards = []
+    merged = merged.sort_values("gap", ascending=False)
 
     if merged.empty:
-        return cards
+        return []
 
-    best = merged.loc[merged["gap_pct"].idxmin()]
-    worst = merged.loc[merged["gap_pct"].idxmax()]
+    worst_idx = merged["gap_pct"].idxmax()
 
-    if worst["gap_pct"] > 0.20 and len(merged) > 1:
-        worst_pct = worst["gap_pct"] * 100
+    cards = []
+    for idx, row in merged.iterrows():
         cards.append(
             {
-                "value": f"{worst_pct:.0f}%",
-                "label": (
-                    f"widest distribution gap — {worst['retailer_name']}. Prioritize field visits."
-                ),
-            }
-        )
-
-    for _, row in merged[merged["gap_pct"] > 0.10].iterrows():
-        gap = int(row["gap"])
-        name = row["retailer_name"]
-        cards.append(
-            {
-                "value": fmt_number(gap),
-                "label": f"authorized pairs not scanning — {name}",
-            }
-        )
-
-    if best["gap_pct"] < 0.05 and len(merged) > 1:
-        best_pct = (1 - best["gap_pct"]) * 100
-        cards.append(
-            {
-                "value": f"{best_pct:.0f}%",
-                "label": f"pair coverage leader — {best['retailer_name']}",
+                "value": fmt_number(int(row["gap"])),
+                "label": f"pairs not scanning — {row['retailer_name']}",
+                "is_worst": idx == worst_idx,
+                "gap_pct": row["gap_pct"],
             }
         )
 
     return cards
+
+
+def _gap_card(data):
+    """Render a single retailer gap card — design system Level 1 card."""
+    children = [
+        html.Div(
+            data["value"],
+            style={
+                "fontFamily": FONT_SERIF,
+                "fontSize": "28px",
+                "fontWeight": "700",
+                "color": INK,
+                "letterSpacing": "-0.02em",
+                "lineHeight": "1",
+            },
+        ),
+        html.P(
+            data["label"],
+            style={
+                "fontFamily": FONT_SANS,
+                "fontSize": "14px",
+                "color": TEXT_SECONDARY,
+                "marginTop": "8px",
+                "lineHeight": "1.4",
+                "margin": "8px 0 0 0",
+            },
+        ),
+    ]
+
+    if data.get("is_worst"):
+        children.append(
+            html.Span(
+                "widest gap",
+                style={
+                    "fontFamily": FONT_SANS,
+                    "fontSize": "11px",
+                    "fontWeight": "600",
+                    "color": TREND_DOWN,
+                    "textTransform": "uppercase",
+                    "letterSpacing": "0.04em",
+                    "marginTop": "8px",
+                    "display": "inline-block",
+                },
+            )
+        )
+
+    return html.Div(
+        children,
+        style={
+            "padding": "16px",
+            "border": f"1px solid {GRIDLINE}",
+            "borderRadius": "2px",
+        },
+    )
+
+
+def _gap_card_grid(cards_data):
+    """Render retailer gap cards in a 3-column CSS grid."""
+    return html.Div(
+        [_gap_card(c) for c in cards_data],
+        className="gap-card-grid",
+    )
 
 
 def _compute_click_detail(auth, quarters, retailer_name):
@@ -319,6 +356,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
                 linecolor=GRIDLINE,
                 title="Item-Store Pairs",
                 tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
+                range=[0, max_total * 1.08],
             ),
             yaxis=dict(
                 showgrid=False,
@@ -358,7 +396,7 @@ def _build_product_line_chart(pl_data):
     fig = go.Figure()
 
     for i, retailer in enumerate(all_retailers):
-        color = TEAL_SEQUENTIAL[i % len(TEAL_SEQUENTIAL)]
+        color = CATEGORICAL_6[i % len(CATEGORICAL_6)]
         values = [pl_data.get(pl, {}).get(retailer, 0) for pl in product_lines]
         fig.add_trace(
             go.Bar(
@@ -552,14 +590,14 @@ def _update_door_count_view(filter_json, active_tab):
     pl_data = _compute_product_line_bars(auth, range_quarters)
     pl_fig = _build_product_line_chart(pl_data)
 
-    # Auth gap stat cards — based on end quarter
-    gap_cards = _compute_auth_gaps(auth, [end_q])
+    # Per-retailer gap cards — one per retailer, 3×2 grid
+    gap_cards = _compute_retailer_gaps(auth, [end_q])
     gap_children = []
     unfiltered = unfiltered_data_callout(filters)
     if unfiltered:
         gap_children.append(unfiltered)
     if gap_cards:
-        gap_children.append(stat_card_row([stat_card(c["value"], c["label"]) for c in gap_cards]))
+        gap_children.append(_gap_card_grid(gap_cards))
 
     return hero_text, subtitle, trend_text, trend_style, retailer_fig, pl_fig, gap_children
 

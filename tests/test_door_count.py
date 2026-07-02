@@ -194,9 +194,9 @@ def test_product_line_chart_data():
     assert len(pl_data) == 5
 
 
-def test_auth_gap_annotations_are_computed():
-    """Auth gap annotations produce narrative insights under default filters."""
-    from app.views.door_count import _compute_auth_gaps, _filter_auth_from_dict
+def test_retailer_gap_cards_are_computed():
+    """Retailer gap cards produce one card per retailer under default filters."""
+    from app.views.door_count import _compute_retailer_gaps, _filter_auth_from_dict
 
     filters = {
         "retailers": [],
@@ -204,11 +204,13 @@ def test_auth_gap_annotations_are_computed():
         "sku": None,
     }
     auth = _filter_auth_from_dict(filters)
-    annotations = _compute_auth_gaps(auth, ["Q4 2025"])
+    cards = _compute_retailer_gaps(auth, ["Q4 2025"])
 
-    assert isinstance(annotations, list)
-    assert len(annotations) >= 1
-    for a in annotations:
-        assert isinstance(a, dict)
-        assert "value" in a
-        assert "label" in a
+    assert isinstance(cards, list)
+    assert len(cards) == 6
+    for c in cards:
+        assert isinstance(c, dict)
+        assert "value" in c
+        assert "label" in c
+        assert "is_worst" in c
+    assert sum(1 for c in cards if c["is_worst"]) == 1

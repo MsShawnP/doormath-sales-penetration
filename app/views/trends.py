@@ -22,17 +22,12 @@ from app.components import (
     unfiltered_data_callout,
 )
 from app.constants import (
-    CHICAGO_70,
+    CATEGORICAL_6,
     FONT_SANS,
     GRIDLINE,
-    HK_25,
-    HK_55,
-    NY_35,
     REFERENCE,
-    SG_55,
     TEAL_SEQUENTIAL,
     TEXT_SECONDARY,
-    TOKYO_40,
     fmt_delta,
     fmt_pct,
 )
@@ -41,12 +36,10 @@ from app.data import AUTH, RETAILER_NAMES, SLOW_LEAK
 _RETAILER_NAMES = RETAILER_NAMES
 _RETAILER_IDS_SORTED = sorted(RETAILER_NAMES.keys())
 
-# Distinct-hue palette for line charts — 6 design-system colors, each a
-# different hue so series are distinguishable without relying on dash/marker.
-_RETAILER_HUES = [HK_25, CHICAGO_70, SG_55, TOKYO_40, NY_35, HK_55]
+# Categorical paired palette (design system slots 1-6) for retailer series.
 RETAILER_COLORS = {}
 for i, ret_id in enumerate(_RETAILER_IDS_SORTED):
-    RETAILER_COLORS[ret_id] = _RETAILER_HUES[i % len(_RETAILER_HUES)]
+    RETAILER_COLORS[ret_id] = CATEGORICAL_6[i % len(CATEGORICAL_6)]
 
 _LINE_DASHES = ["solid", "dash", "dot", "dashdot", "longdash", "longdashdot"]
 _MARKER_SYMBOLS = ["circle", "square", "diamond", "triangle-up", "cross", "star"]

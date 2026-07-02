@@ -207,6 +207,21 @@
     line-height: 1.5;
 }
 
+/* Gap card grid — 3 columns, collapse to 2 then 1 at narrow widths */
+.gap-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+    .gap-card-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 /* Mobile responsive */
 @media (max-width: 640px) {
     .tool-intro h1 { font-size: 16px; }
@@ -222,6 +237,10 @@
 
     .filter-group {
         min-width: 100%;
+    }
+
+    .gap-card-grid {
+        grid-template-columns: 1fr;
     }
 
     .custom-tabs {

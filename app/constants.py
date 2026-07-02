@@ -26,6 +26,7 @@ RED_42 = "#cc100a"
 # ── Hong Kong sequential teal ──
 HK_5 = "#063d32"
 HK_15 = "#0a5c4b"
+HK_20 = "#0c6552"
 HK_25 = "#0e6e5a"
 HK_35 = "#158f75"  # Lailara default teal
 HK_45 = "#1fa282"
@@ -64,9 +65,9 @@ PASS_BG = "#e4f5f0"
 PASS_TEXT = "#0e6e5a"
 WARN_BG = "#fdeee0"
 WARN_TEXT = "#7a3d10"
-FAIL_BG = "#fde8e7"
+FAIL_BG = "#fce8e7"
 FAIL_TEXT = "#7a0906"
-INFO_BG = "#e5e8f5"
+INFO_BG = "#e8eaf4"
 INFO_TEXT = "#1f2e7a"
 
 # ── Semantic aliases for charts ──
@@ -77,6 +78,10 @@ SCAN_BAR = HK_35
 
 # ── Teal sequential palette (for charts) ──
 TEAL_SEQUENTIAL = [HK_5, HK_15, HK_25, HK_35, HK_45, HK_55, HK_70, HK_85]
+
+# ── Categorical paired palette (design system slots 1-6) ──
+CATEGORICAL_6 = [CHICAGO_20, CHICAGO_70, HK_20, HK_70, TOKYO_20, TOKYO_70]
+CATEGORICAL_6_TEXT = [WHITE, "#0a0f29", WHITE, "#063d32", WHITE, "#6e1a2c"]
 
 # ── Typography (for Plotly) ──
 FONT_SERIF = "Playfair Display, Georgia, Times New Roman, serif"
