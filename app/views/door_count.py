@@ -301,7 +301,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
             marker=dict(color=SCAN_BAR, opacity=scan_opacity),
             text=[fmt_number(v) for v in scan_counts],
             textposition="inside",
-            textfont=dict(family=FONT_SANS, size=12, color=WHITE),
+            textfont=dict(family=FONT_SANS, size=12, color=WHITE, weight="bold"),
             hoverinfo="skip",
         )
     )
@@ -330,7 +330,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
                 y=retailers[i],
                 text=label,
                 showarrow=False,
-                font=dict(family=FONT_SANS, size=12, color=INK),
+                font=dict(family=FONT_SANS, size=12, color=INK, weight="bold"),
                 xanchor="center",
                 yanchor="middle",
             )
@@ -340,7 +340,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
                 y=retailers[i],
                 text=f"  {label}",
                 showarrow=False,
-                font=dict(family=FONT_SANS, size=12, color=INK),
+                font=dict(family=FONT_SANS, size=12, color=INK, weight="bold"),
                 xanchor="left",
                 yanchor="middle",
             )
