@@ -288,7 +288,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
             gap_opacity.append(0.15)
         else:
             scan_opacity.append(1.0)
-            gap_opacity.append(0.7)
+            gap_opacity.append(1.0)
 
     fig = go.Figure()
 
@@ -582,8 +582,8 @@ def _update_door_count_view(filter_json, active_tab):
         trend_text = ""
         trend_style = {"display": "none"}
 
-    # Retailer bar chart — full range
-    bar_data = _compute_retailer_bars(auth, range_quarters)
+    # Retailer bar chart — end quarter only (must match hero + gap cards)
+    bar_data = _compute_retailer_bars(auth, [end_q])
     retailer_fig = _build_retailer_chart(bar_data)
 
     # Product line chart — full range
@@ -637,11 +637,9 @@ def _update_callout_and_dim(pinned_retailer, filter_json):
     """Show/hide callout card and dim non-selected retailers."""
     filters = json.loads(filter_json) if filter_json else {}
     end_q = filters.get("end_quarter", "Q4 2025")
-    start_q = filters.get("start_quarter", "Q1 2025")
-    range_quarters = quarters_in_range(start_q, end_q)
 
     auth = _filter_auth_from_dict(filters)
-    bar_data = _compute_retailer_bars(auth, range_quarters)
+    bar_data = _compute_retailer_bars(auth, [end_q])
 
     if not pinned_retailer:
         fig = _build_retailer_chart(bar_data, selected_retailer=None)
