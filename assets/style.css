@@ -322,6 +322,12 @@ select:focus {
     border-color: var(--ll-chicago-20) !important;
 }
 
+/* AG Grid — tighter cell padding */
+.ag-theme-alpine {
+    --ag-cell-horizontal-padding: 8px;
+    --ag-header-cell-horizontal-padding: 8px;
+}
+
 /* AG Grid row selection — replace blue/purple default */
 .ag-theme-alpine .ag-row-selected,
 .ag-theme-balham .ag-row-selected,
@@ -388,6 +394,15 @@ select:focus {
 .all-selected .dash-dropdown-value,
 .all-selected .dash-dropdown-value-count {
     display: none !important;
+}
+
+/* Move chevron to right side when all-selected hides multi-select chips */
+.all-selected .dash-dropdown-grid-container {
+    grid-template-columns: 1fr 15px;
+}
+
+.all-selected .dash-dropdown-grid-container svg {
+    grid-column: 2;
 }
 
 /* Reduced motion */

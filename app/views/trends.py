@@ -5,7 +5,7 @@ import statistics
 
 import plotly.graph_objects as go
 from cinderhaven_store_universe.constants import SKU_NAMES
-from dash import Input, Output, State, callback, dcc, html, no_update
+from dash import ALL, Input, Output, State, callback, ctx, dcc, html, no_update
 
 from app.calculations import (
     batch_acv_by_retailer,
@@ -22,11 +22,17 @@ from app.components import (
     unfiltered_data_callout,
 )
 from app.constants import (
+    CHICAGO_70,
     FONT_SANS,
     GRIDLINE,
+    HK_25,
+    HK_55,
+    NY_35,
     REFERENCE,
+    SG_55,
     TEAL_SEQUENTIAL,
     TEXT_SECONDARY,
+    TOKYO_40,
     fmt_delta,
     fmt_pct,
 )
@@ -35,15 +41,12 @@ from app.data import AUTH, RETAILER_NAMES, SLOW_LEAK
 _RETAILER_NAMES = RETAILER_NAMES
 _RETAILER_IDS_SORTED = sorted(RETAILER_NAMES.keys())
 
-# Assign one teal color per retailer, evenly spaced across the 8-shade palette.
-# 6 retailers, 8 teal shades -- pick indices [0, 1, 2, 4, 5, 7] for contrast.
-_RETAILER_COLOR_INDICES = [0, 1, 2, 4, 5, 6]
+# Distinct-hue palette for line charts — 6 design-system colors, each a
+# different hue so series are distinguishable without relying on dash/marker.
+_RETAILER_HUES = [HK_25, CHICAGO_70, SG_55, TOKYO_40, NY_35, HK_55]
 RETAILER_COLORS = {}
 for i, ret_id in enumerate(_RETAILER_IDS_SORTED):
-    idx = (
-        _RETAILER_COLOR_INDICES[i] if i < len(_RETAILER_COLOR_INDICES) else i % len(TEAL_SEQUENTIAL)
-    )
-    RETAILER_COLORS[ret_id] = TEAL_SEQUENTIAL[idx]
+    RETAILER_COLORS[ret_id] = _RETAILER_HUES[i % len(_RETAILER_HUES)]
 
 _LINE_DASHES = ["solid", "dash", "dot", "dashdot", "longdash", "longdashdot"]
 _MARKER_SYMBOLS = ["circle", "square", "diamond", "triangle-up", "cross", "star"]
@@ -84,8 +87,8 @@ def _compute_tdp_by_retailer(filters, quarters):
 def _compute_slow_leak_annotations(filters, quarters):
     """Check slow-leak SKUs and return stat card data for significant drops.
 
-    A significant drop is >20 percentage points from peak penetration.
-    Returns list of dicts with 'value' and 'label' keys.
+    A significant drop is >10 percentage points from peak penetration.
+    Returns list of dicts with 'value', 'label', and 'sku_id' keys.
     """
     product_lines = filters.get("product_lines", [])
     sku = filters.get("sku")
@@ -117,7 +120,7 @@ def _compute_slow_leak_annotations(filters, quarters):
         current_pct = penetration_by_q[quarters[-1]] if quarters else 0.0
         drop_pp = peak_pct - current_pct
 
-        if drop_pp > 0.20:
+        if drop_pp > 0.10:
             peak_q = [q for q, v in penetration_by_q.items() if v == peak_pct][0]
             try:
                 peak_idx = quarters.index(peak_q)
@@ -134,7 +137,8 @@ def _compute_slow_leak_annotations(filters, quarters):
             sku_label = SKU_NAMES.get(sku_id, sku_id)
             cards.append(
                 {
-                    "value": f"~{doors_lost}",
+                    "value": f"{doors_lost}",
+                    "sku_id": sku_id,
                     "label": (
                         f"doors lost — {sku_label} over "
                         f"{n_quarters} quarter{'s' if n_quarters != 1 else ''}. "
@@ -147,6 +151,31 @@ def _compute_slow_leak_annotations(filters, quarters):
 
 
 # -- Chart builders --
+
+
+def _add_endline_labels(fig, labels, min_gap_pct=2.5):
+    """Add right-edge annotations for each series, dodging overlaps.
+
+    labels: list of dicts with keys 'y', 'name', 'color', 'value_str'.
+    min_gap_pct: minimum vertical gap as percentage of y-range span.
+    """
+    if not labels:
+        return
+    labels.sort(key=lambda lb: lb["y"])
+    for i in range(1, len(labels)):
+        if labels[i]["y"] - labels[i - 1]["y"] < min_gap_pct:
+            labels[i]["y"] = labels[i - 1]["y"] + min_gap_pct
+    for lb in labels:
+        fig.add_annotation(
+            x=1.0,
+            y=lb["y"],
+            xref="paper",
+            text=f"{lb['name']}  {lb['value_str']}",
+            showarrow=False,
+            xanchor="left",
+            yanchor="middle",
+            font=dict(family=FONT_SANS, size=11, color=lb["color"]),
+        )
 
 
 def _auto_y_range(all_values, suffix_pct=False):
@@ -225,6 +254,19 @@ def _build_acv_chart(acv_data, quarters, selected_point=None):
 
     y_range = _auto_y_range(all_pct_values, suffix_pct=True)
 
+    # End-of-line labels for each retailer
+    endline = []
+    for ret_id in sorted(acv_data.keys()):
+        final_val = acv_data[ret_id].get(quarters[-1], 0.0) * 100
+        endline.append(
+            {
+                "y": final_val,
+                "name": _RETAILER_NAMES.get(ret_id, ret_id),
+                "color": RETAILER_COLORS.get(ret_id, TEAL_SEQUENTIAL[0]),
+                "value_str": f"{final_val:.1f}%",
+            }
+        )
+
     fig.update_layout(
         **economist_layout(
             title=dict(text="ACV% by Retailer"),
@@ -255,9 +297,12 @@ def _build_acv_chart(acv_data, quarters, selected_point=None):
                 entrywidthmode="fraction",
                 entrywidth=0.14,
             ),
+            margin=dict(r=160),
             height=480,
         )
     )
+
+    _add_endline_labels(fig, endline)
 
     return fig
 
@@ -365,6 +410,20 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
 
     y_range = _auto_y_range(all_values)
 
+    # End-of-line labels using true (un-dodged) values
+    endline = []
+    for ret_id in sorted(tdp_data.keys()):
+        true_final = tdp_data[ret_id].get(quarters[-1], 0.0)
+        plot_final = nudged[ret_id].get(quarters[-1], 0.0)
+        endline.append(
+            {
+                "y": plot_final,
+                "name": _RETAILER_NAMES.get(ret_id, ret_id),
+                "color": RETAILER_COLORS.get(ret_id, TEAL_SEQUENTIAL[0]),
+                "value_str": f"{true_final:.1f}",
+            }
+        )
+
     fig.update_layout(
         **economist_layout(
             title=dict(text="TDP by Retailer"),
@@ -394,9 +453,12 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
                 entrywidthmode="fraction",
                 entrywidth=0.14,
             ),
+            margin=dict(r=160),
             height=480,
         )
     )
+
+    _add_endline_labels(fig, endline, min_gap_pct=1.5)
 
     return fig
 
@@ -473,7 +535,27 @@ def _update_trends_charts(filter_json, active_tab):
     if unfiltered:
         leak_children.append(unfiltered)
     if leak_cards:
-        leak_children.append(stat_card_row([stat_card(c["value"], c["label"]) for c in leak_cards]))
+        leak_children.append(
+            html.H3(
+                "Slow-Leak Watch",
+                style={
+                    "fontFamily": FONT_SANS,
+                    "fontSize": "14px",
+                    "fontWeight": "600",
+                    "color": TEXT_SECONDARY,
+                    "textTransform": "uppercase",
+                    "letterSpacing": "0.04em",
+                    "margin": "24px 0 0 0",
+                },
+            )
+        )
+        clickable_cards = []
+        for c in leak_cards:
+            card = stat_card(c["value"], c["label"])
+            card.id = {"type": "leak-card", "index": c["sku_id"]}
+            card.style["cursor"] = "pointer"
+            clickable_cards.append(card)
+        leak_children.append(stat_card_row(clickable_cards))
 
     return acv_fig, tdp_fig, leak_children
 
@@ -610,3 +692,18 @@ def _update_callout_and_dim(acv_pin, tdp_pin, filter_json):
     )
 
     return card, acv_fig, tdp_fig
+
+
+@callback(
+    Output("filter-sku", "value", allow_duplicate=True),
+    Input({"type": "leak-card", "index": ALL}, "n_clicks"),
+    prevent_initial_call=True,
+)
+def _leak_card_click(n_clicks_list):
+    """Set the SKU filter when a slow-leak card is clicked."""
+    if not n_clicks_list or not any(n_clicks_list):
+        return no_update
+    triggered = ctx.triggered_id
+    if triggered and isinstance(triggered, dict):
+        return triggered["index"]
+    return no_update

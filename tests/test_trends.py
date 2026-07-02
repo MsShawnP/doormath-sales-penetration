@@ -234,10 +234,11 @@ def test_retailer_colors_are_unique():
     assert len(colors) == len(set(colors)), "Retailer colors should be unique"
 
 
-def test_retailer_colors_from_teal_palette():
-    """All retailer colors come from the TEAL_SEQUENTIAL palette."""
-    from app.constants import TEAL_SEQUENTIAL
+def test_retailer_colors_from_design_system():
+    """All retailer colors come from the design system palette."""
+    from app.constants import CHICAGO_70, HK_25, HK_55, NY_35, SG_55, TOKYO_40
     from app.views.trends import RETAILER_COLORS
 
+    allowed = {HK_25, CHICAGO_70, SG_55, TOKYO_40, NY_35, HK_55}
     for color in RETAILER_COLORS.values():
-        assert color in TEAL_SEQUENTIAL, f"Color {color} not in TEAL_SEQUENTIAL palette"
+        assert color in allowed, f"Color {color} not in design system palette"

@@ -206,36 +206,32 @@ _COLUMN_DEFS = [
     {
         "field": "item_name",
         "headerName": "Item",
-        "flex": 2,
-        "minWidth": 220,
-        "tooltipField": "item_name",
+        "minWidth": 200,
     },
     {
         "field": "retailer_name",
         "headerName": "Retailer",
-        "flex": 1,
-        "minWidth": 140,
-        "tooltipField": "retailer_name",
+        "minWidth": 150,
     },
     {
         "field": "store_id",
         "headerName": "Store",
-        "width": 90,
+        "minWidth": 200,
     },
     {
         "field": "authorized_date",
         "headerName": "Authorized",
-        "width": 110,
+        "minWidth": 110,
     },
     {
         "field": "last_scan_date",
         "headerName": "Last Scan",
-        "width": 110,
+        "minWidth": 100,
     },
     {
         "field": "weeks_silent",
         "headerName": "Weeks Silent",
-        "width": 120,
+        "minWidth": 120,
         "sort": "desc",
         "cellStyle": {
             "styleConditions": [
@@ -393,10 +389,14 @@ def layout():
                         id="ex-grid",
                         columnDefs=_COLUMN_DEFS,
                         rowData=[],
+                        columnSize="autoSize",
+                        columnSizeOptions={"skipHeader": False},
                         defaultColDef={
                             "sortable": True,
                             "filter": True,
                             "resizable": True,
+                            "wrapText": False,
+                            "autoHeight": False,
                         },
                         dashGridOptions={
                             "pagination": True,
@@ -404,7 +404,6 @@ def layout():
                             "rowSelection": {"mode": "singleRow"},
                             "animateRows": True,
                             "domLayout": "autoHeight",
-                            "tooltipShowDelay": 300,
                         },
                         style={"width": "100%"},
                         className="ag-theme-alpine",
