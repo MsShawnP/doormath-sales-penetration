@@ -315,7 +315,14 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
             x=gap_counts,
             name="Not scanning (gap)",
             orientation="h",
-            marker=dict(color=GAP_BAR, opacity=gap_opacity),
+            # Diagonal hatch is a non-color cue on top of the neutral grey
+            # fill -- gap is distinguishable from the scanning segment by
+            # shape as well as color/lightness.
+            marker=dict(
+                color=GAP_BAR,
+                opacity=gap_opacity,
+                pattern=dict(shape="/", fgcolor=GAP_TEXT, size=6, solidity=0.3),
+            ),
             hoverinfo="skip",
         )
     )
