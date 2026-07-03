@@ -16,9 +16,10 @@ from app.components import (
 )
 from app.constants import (
     CATEGORICAL_6,
-    DISABLED,
     FONT_SANS,
     FONT_SERIF,
+    GAP_BAR,
+    GAP_TEXT,
     GRIDLINE,
     INK,
     SCAN_BAR,
@@ -314,7 +315,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
             x=gap_counts,
             name="Not scanning (gap)",
             orientation="h",
-            marker=dict(color=DISABLED, opacity=gap_opacity),
+            marker=dict(color=GAP_BAR, opacity=gap_opacity),
             hoverinfo="skip",
         )
     )
@@ -330,7 +331,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
                 y=retailers[i],
                 text=label,
                 showarrow=False,
-                font=dict(family=FONT_SANS, size=12, color=INK, weight="bold"),
+                font=dict(family=FONT_SANS, size=12, color=GAP_TEXT, weight="bold"),
                 xanchor="center",
                 yanchor="middle",
             )
@@ -340,7 +341,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
                 y=retailers[i],
                 text=f"  {label}",
                 showarrow=False,
-                font=dict(family=FONT_SANS, size=12, color=INK, weight="bold"),
+                font=dict(family=FONT_SANS, size=12, color=GAP_TEXT, weight="bold"),
                 xanchor="left",
                 yanchor="middle",
             )

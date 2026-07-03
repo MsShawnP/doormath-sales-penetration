@@ -13,7 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
-# Install store universe package first (changes less often)
+# Install vendored packages first (change less often)
+COPY packages/lailara-palette/ /app/packages/lailara-palette/
+RUN pip install --no-cache-dir /app/packages/lailara-palette/
 COPY packages/cinderhaven-store-universe/ /app/packages/cinderhaven-store-universe/
 RUN pip install --no-cache-dir /app/packages/cinderhaven-store-universe/
 

@@ -55,7 +55,11 @@ def economist_layout(**overrides):
             bgcolor="rgba(0,0,0,0)",
         ),
     )
-    defaults.update(overrides)
+    for key, val in overrides.items():
+        if key in defaults and isinstance(defaults[key], dict) and isinstance(val, dict):
+            defaults[key] = {**defaults[key], **val}
+        else:
+            defaults[key] = val
     return defaults
 
 
