@@ -13,6 +13,7 @@ from app.components import (
     stat_card,
     stat_card_row,
     td_style,
+    term_disclosure,
     th_style,
     unfiltered_data_callout,
 )
@@ -325,6 +326,13 @@ def layout():
         [
             # Summary stats area
             html.Div(id="ex-summary-stats"),
+            html.Div(
+                [
+                    term_disclosure("exceptions", inline=True),
+                    term_disclosure("weeks_silent", inline=True),
+                ],
+                style={"marginBottom": "16px"},
+            ),
             # Annotation callout area
             html.Div(id="ex-annotation"),
             # SKU summary roll-up
@@ -342,7 +350,7 @@ def layout():
                     ),
                     html.Div(id="ex-sku-summary"),
                 ],
-                style={"marginBottom": "40px"},
+                style={"marginBottom": "48px"},
             ),
             # Download CSV button + detail grid
             html.Div(

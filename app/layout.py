@@ -6,6 +6,7 @@ from dash import Input, Output, callback, dcc, html
 
 from app import lailara_frame
 from app.app import app
+from app.components import glossary_block
 from app.constants import CHICAGO_20
 from app.filters import (
     DEFAULT_FILTER_STATE,
@@ -30,6 +31,7 @@ def _build_intro():
                 "Cinderhaven, a fictional $25M specialty food brand, to "
                 "demonstrate the analytics without exposing client data."
             ),
+            glossary_block(),
         ],
         className="tool-intro",
     )

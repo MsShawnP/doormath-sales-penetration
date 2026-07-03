@@ -1,4 +1,5 @@
-"""Shared reusable Dash HTML components — dark callout cards, annotations, error banners."""
+"""Shared reusable Dash HTML components — dark callout cards, annotations, error banners,
+and click-to-expand term definitions."""
 
 from dash import html
 
@@ -18,6 +19,104 @@ from app.constants import (
     TEXT_SECONDARY,
     WHITE,
 )
+
+TERM_DEFINITIONS = {
+    "penetration": (
+        "Sales / distribution penetration",
+        "Of all the stores that could carry an item, the share that actually do. "
+        "It’s the foundation metric: before velocity, household penetration, or "
+        "repeat rate mean anything, the product first has to exist on the shelf.",
+    ),
+    "authorized": (
+        "Authorized (authorized pairs)",
+        "An item-store pair the retailer has approved to carry. “Authorized” = the "
+        "retailer said yes, this SKU is cleared for this store’s shelf. It’s "
+        "permission, not proof the product is there.",
+    ),
+    "scanning": (
+        "Scanning (scanning pairs)",
+        "An item-store pair that is actually ringing up at the register (recorded "
+        "POS scans). “Currently scanning” means it sold in the most recent quarter. "
+        "This is the shelf saying yes, as opposed to the contract saying yes.",
+    ),
+    "gap": (
+        "Authorization-to-scan gap (“the gap”)",
+        "Item-store pairs that are authorized but not currently scanning. The "
+        "retailer said yes, but nothing is selling — the product isn’t on the "
+        "shelf, or isn’t moving. This delta is where authorized distribution "
+        "quietly leaks revenue.",
+    ),
+    "door_count": (
+        "% of addressable doors carrying (door count)",
+        "Of all the store doors that could carry the item, how many actually "
+        "carry it — as a count and a percentage.",
+    ),
+    "acv": (
+        "ACV% (weighted distribution)",
+        "All-Commodity Volume–weighted distribution: the percentage of total retail "
+        "sales volume flowing through the stores that carry your item. It weights "
+        "stores by size, so being in 30% of the largest stores is worth far more "
+        "reach than 30% of small ones. Unlike a raw store count, ACV% reflects "
+        "the commercial value of where you’re distributed.",
+    ),
+    "tdp": (
+        "TDP (Total Distribution Points)",
+        "The sum of ACV% across all your items in a category. It captures both "
+        "breadth (how many doors) and depth (how many of your items per door) in "
+        "a single number — a compact measure of total shelf presence.",
+    ),
+    "unweighted": (
+        "Unweighted distribution",
+        "The raw percentage of stores carrying the item, treating every store "
+        "equally regardless of size. The plain-count companion to ACV%.",
+    ),
+    "slow_leak": (
+        "Slow leak (slow-leak detection)",
+        "An item quietly losing doors quarter after quarter, each drop small "
+        "enough that no single period looks alarming — so the erosion goes "
+        "unnoticed until the cumulative loss is large. The tool surfaces these "
+        "before they become obvious.",
+    ),
+    "exceptions": (
+        "Exceptions (authorized-but-not-scanning)",
+        "The concrete list behind the gap: each authorized item-store pair that "
+        "isn’t scanning, so a team can chase specific voids. Ranked by weeks silent.",
+    ),
+    "weeks_silent": (
+        "Weeks silent",
+        "The number of consecutive weeks an authorized pair has recorded no "
+        "scans. Longer = more entrenched a void.",
+    ),
+}
+
+
+def term_disclosure(term_key, inline=False):
+    """Click-to-expand caret disclosure for a term definition.
+
+    Uses native <details>/<summary> — no JS needed.
+    The caret ▸/▾ is rendered via CSS ::before.
+    """
+    title, definition = TERM_DEFINITIONS[term_key]
+    cls = "term-disclosure-inline" if inline else "term-disclosure"
+    return html.Details(
+        [
+            html.Summary(title, className="term-toggle"),
+            html.P(definition, className="term-body"),
+        ],
+        className=cls,
+    )
+
+
+def glossary_block():
+    """Collapsible glossary containing all term definitions."""
+    items = [term_disclosure(key) for key in TERM_DEFINITIONS]
+    return html.Details(
+        [
+            html.Summary("What these terms mean", className="glossary-toggle"),
+            html.Div(items, className="glossary-content"),
+        ],
+        className="glossary-block",
+    )
 
 
 def dark_callout_card(title, subtitle=None, rows=None):

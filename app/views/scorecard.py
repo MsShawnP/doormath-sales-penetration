@@ -25,6 +25,7 @@ from app.components import (
     stat_card,
     stat_card_row,
     td_style,
+    term_disclosure,
     th_style,
     unfiltered_data_callout,
 )
@@ -438,9 +439,16 @@ def layout():
                 ],
                 style={
                     "textAlign": "center",
-                    "padding": "32px 0",
-                    "marginBottom": "24px",
+                    "padding": "40px 0 32px",
+                    "marginBottom": "32px",
                 },
+            ),
+            html.Div(
+                [
+                    term_disclosure("penetration", inline=True),
+                    term_disclosure("unweighted", inline=True),
+                ],
+                style={"marginTop": "8px"},
             ),
             # Headline insight cards (visible without scrolling)
             html.Div(id="sc-headline-cards"),
@@ -459,7 +467,7 @@ def layout():
                     ),
                     html.Div(id="sc-retailer-table"),
                 ],
-                style={"marginBottom": "40px"},
+                style={"marginBottom": "48px"},
             ),
             # Product line summary table
             html.Div(
@@ -476,7 +484,7 @@ def layout():
                     ),
                     html.Div(id="sc-product-line-table"),
                 ],
-                style={"marginBottom": "40px"},
+                style={"marginBottom": "48px"},
             ),
             # Top exceptions
             html.Div(
@@ -493,7 +501,7 @@ def layout():
                     ),
                     html.Div(id="sc-exceptions-list"),
                 ],
-                style={"marginBottom": "40px"},
+                style={"marginBottom": "48px"},
             ),
             # Annotation callout
             html.Div(id="sc-annotation"),

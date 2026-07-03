@@ -12,6 +12,7 @@ from app.calculations import filter_auth, prior_quarter, quarters_in_range
 from app.charts import CHART_CONFIG, economist_layout
 from app.components import (
     dark_callout_card,
+    term_disclosure,
     unfiltered_data_callout,
 )
 from app.constants import (
@@ -19,7 +20,6 @@ from app.constants import (
     FONT_SANS,
     FONT_SERIF,
     GAP_BAR,
-    GAP_TEXT,
     GRIDLINE,
     INK,
     SCAN_BAR,
@@ -220,7 +220,7 @@ def _gap_card(data):
     return html.Div(
         children,
         style={
-            "padding": "16px",
+            "padding": "24px",
             "border": f"1px solid {GRIDLINE}",
             "borderRadius": "2px",
         },
@@ -315,14 +315,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
             x=gap_counts,
             name="Not scanning (gap)",
             orientation="h",
-            # Diagonal hatch is a non-color cue on top of the neutral grey
-            # fill -- gap is distinguishable from the scanning segment by
-            # shape as well as color/lightness.
-            marker=dict(
-                color=GAP_BAR,
-                opacity=gap_opacity,
-                pattern=dict(shape="/", fgcolor=GAP_TEXT, size=6, solidity=0.3),
-            ),
+            marker=dict(color=GAP_BAR, opacity=gap_opacity),
             hoverinfo="skip",
         )
     )
@@ -338,7 +331,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
                 y=retailers[i],
                 text=label,
                 showarrow=False,
-                font=dict(family=FONT_SANS, size=12, color=GAP_TEXT, weight="bold"),
+                font=dict(family=FONT_SANS, size=12, color=WHITE, weight="bold"),
                 xanchor="center",
                 yanchor="middle",
             )
@@ -348,7 +341,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
                 y=retailers[i],
                 text=f"  {label}",
                 showarrow=False,
-                font=dict(family=FONT_SANS, size=12, color=GAP_TEXT, weight="bold"),
+                font=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY, weight="bold"),
                 xanchor="left",
                 yanchor="middle",
             )
@@ -360,19 +353,15 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
             xaxis=dict(
                 showgrid=True,
                 gridcolor=GRIDLINE,
-                showline=True,
-                linecolor=GRIDLINE,
-                title="Item-Store Pairs",
-                tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
+                title=None,
                 range=[0, max_total * 1.08],
             ),
             yaxis=dict(
                 showgrid=False,
-                showline=False,
                 tickfont=dict(family=FONT_SANS, size=13, color=INK),
                 automargin=True,
             ),
-            margin=dict(l=120, r=100, t=80, b=40),
+            margin=dict(l=120, r=100, t=100, b=50),
             legend=dict(
                 orientation="h",
                 yanchor="top",
@@ -383,7 +372,7 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
                 entrywidthmode="fraction",
                 entrywidth=0.3,
             ),
-            height=max(300, len(retailers) * 55 + 100),
+            height=max(320, len(retailers) * 55 + 120),
         )
     )
 
@@ -429,18 +418,14 @@ def _build_product_line_chart(pl_data):
             xaxis=dict(
                 showgrid=True,
                 gridcolor=GRIDLINE,
-                showline=True,
-                linecolor=GRIDLINE,
-                title="Item-Store Pairs",
-                tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
+                title=None,
             ),
             yaxis=dict(
                 showgrid=False,
-                showline=False,
                 tickfont=dict(family=FONT_SANS, size=13, color=INK),
                 automargin=True,
             ),
-            margin=dict(l=160, r=80, t=80, b=60),
+            margin=dict(l=160, r=80, t=100, b=60),
             legend=dict(
                 orientation="h",
                 yanchor="top",
@@ -451,7 +436,7 @@ def _build_product_line_chart(pl_data):
                 entrywidthmode="fraction",
                 entrywidth=0.16,
             ),
-            height=max(400, len(product_lines) * 120 + 140),
+            height=max(420, len(product_lines) * 120 + 160),
         )
     )
 
@@ -490,11 +475,18 @@ def layout():
                             "fontWeight": "600",
                         },
                     ),
+                    html.Div(
+                        [
+                            term_disclosure("scanning", inline=True),
+                            term_disclosure("authorized", inline=True),
+                        ],
+                        style={"marginTop": "12px"},
+                    ),
                 ],
                 style={
                     "textAlign": "center",
-                    "padding": "32px 0",
-                    "marginBottom": "24px",
+                    "padding": "40px 0 32px",
+                    "marginBottom": "32px",
                 },
             ),
             html.Div(
@@ -504,6 +496,7 @@ def layout():
                 ),
                 **{"aria-label": "Authorized versus carrying doors by retailer"},
             ),
+            term_disclosure("gap", inline=True),
             html.Div(id="dc-callout-area"),
             html.Div(id="dc-auth-gap-annotations"),
             html.Div(
@@ -511,9 +504,10 @@ def layout():
                     id="dc-product-line-chart",
                     config=CHART_CONFIG,
                 ),
-                style={"marginTop": "40px"},
+                style={"marginTop": "56px"},
                 **{"aria-label": "Carrying doors by product line and retailer"},
             ),
+            term_disclosure("door_count", inline=True),
             dcc.Store(id="dc-pinned-retailer", data=None),
         ],
     )

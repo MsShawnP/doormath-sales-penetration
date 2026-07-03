@@ -31,18 +31,19 @@ def economist_layout(**overrides):
         ),
         xaxis=dict(
             showgrid=False,
-            showline=True,
-            linecolor=GRIDLINE,
-            tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
+            showline=False,
+            zeroline=False,
+            tickfont=dict(family=FONT_SANS, size=11, color=TEXT_SECONDARY),
         ),
         yaxis=dict(
             showgrid=True,
             gridcolor=GRIDLINE,
             gridwidth=1,
             showline=False,
-            tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
+            zeroline=False,
+            tickfont=dict(family=FONT_SANS, size=11, color=TEXT_SECONDARY),
         ),
-        margin=dict(l=60, r=20, t=80, b=40),
+        margin=dict(l=60, r=20, t=100, b=50),
         hoverlabel=dict(
             bgcolor=CANVAS,
             font=dict(family=FONT_SANS, size=13, color=INK),
@@ -51,8 +52,9 @@ def economist_layout(**overrides):
         dragmode=False,
         showlegend=True,
         legend=dict(
-            font=dict(family=FONT_SANS, size=11, color=TEXT_SECONDARY),
+            font=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
             bgcolor="rgba(0,0,0,0)",
+            borderwidth=0,
         ),
     )
     for key, val in overrides.items():

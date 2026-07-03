@@ -19,6 +19,7 @@ from app.components import (
     dark_callout_card,
     stat_card,
     stat_card_row,
+    term_disclosure,
     unfiltered_data_callout,
 )
 from app.constants import (
@@ -265,17 +266,11 @@ def _build_acv_chart(acv_data, quarters, selected_point=None):
             title=dict(text="ACV% by Retailer"),
             xaxis=dict(
                 showgrid=False,
-                showline=True,
-                linecolor=GRIDLINE,
-                tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
                 title=None,
             ),
             yaxis=dict(
                 showgrid=True,
                 gridcolor=GRIDLINE,
-                gridwidth=1,
-                showline=False,
-                tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
                 ticksuffix="%",
                 range=y_range,
                 title=None,
@@ -290,8 +285,8 @@ def _build_acv_chart(acv_data, quarters, selected_point=None):
                 entrywidthmode="fraction",
                 entrywidth=0.14,
             ),
-            margin=dict(r=160),
-            height=480,
+            margin=dict(r=160, t=100),
+            height=500,
         )
     )
 
@@ -422,18 +417,12 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
             title=dict(text="TDP by Retailer"),
             xaxis=dict(
                 showgrid=False,
-                showline=True,
-                linecolor=GRIDLINE,
-                tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
                 title=None,
             ),
             yaxis=dict(
                 showgrid=True,
                 gridcolor=GRIDLINE,
-                gridwidth=1,
-                showline=False,
-                tickfont=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY),
-                title="TDP points",
+                title=None,
                 range=y_range,
             ),
             legend=dict(
@@ -446,8 +435,8 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
                 entrywidthmode="fraction",
                 entrywidth=0.14,
             ),
-            margin=dict(r=160),
-            height=480,
+            margin=dict(r=160, t=100),
+            height=500,
         )
     )
 
@@ -470,19 +459,19 @@ def layout():
                 ),
                 **{"aria-label": "ACV percent trend by retailer over time"},
             ),
+            term_disclosure("acv", inline=True),
             html.Div(
                 dcc.Graph(
                     id="tr-tdp-chart",
                     config=CHART_CONFIG,
                 ),
-                style={"marginTop": "40px"},
+                style={"marginTop": "56px"},
                 **{"aria-label": "TDP trend by retailer over time"},
             ),
-            # Click-to-pin callout card area
+            term_disclosure("tdp", inline=True),
             html.Div(id="tr-callout-area"),
-            # Slow-leak annotation area
             html.Div(id="tr-slow-leak-annotations"),
-            # Hidden stores for click-to-pin state
+            term_disclosure("slow_leak", inline=True),
             dcc.Store(id="tr-pinned-acv", data=None),
             dcc.Store(id="tr-pinned-tdp", data=None),
         ],

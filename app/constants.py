@@ -120,15 +120,12 @@ TREND_UP = HK_35
 TREND_DOWN = TOKYO_40
 AUTH_BAR = CHICAGO_20
 SCAN_BAR = HK_35
-# Gap bar is a deliberate ACCESSIBILITY choice: neutral London-70 grey, not
-# Tokyo rose. Teal-vs-rose (green-vs-red) is unreadable under red/green
-# color-vision deficiency (~8% of men) on a good/bad semantic bar where
-# color carries meaning. Neutral grey stays distinguishable from the teal
-# scanning segment under deuteranopia/protanopia via lightness + hue-vs-
-# neutral, not a red/green hue pair. This intentionally overrides the
-# earlier Tokyo-70 "mild negative" styling for this specific chart.
-GAP_BAR = LL_DISABLED
-GAP_TEXT = LL_TEXT
+# Gap bar: solid Chicago-20 navy — colorblind-safe against HK-35 teal
+# (navy vs teal distinguished by hue, not red/green).
+# Alternative: swap to GAP_BAR_ALT for single-hue teal sequential.
+GAP_BAR = LL_CHICAGO
+GAP_BAR_ALT = LL_HK_DARK  # HK-20 #0c6552 — darkest teal, also safe
+GAP_TEXT = WHITE
 
 # ── Teal sequential palette (for charts) ──
 TEAL_SEQUENTIAL = list(LL_SEQ)

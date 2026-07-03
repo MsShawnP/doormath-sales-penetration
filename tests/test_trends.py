@@ -22,14 +22,9 @@ def test_trends_layout_has_chart_ids():
     from app.views.trends import layout
 
     result = layout()
-    # Charts are in separate wrapper Divs (children[0] = ACV, children[1] = TDP)
-    acv_wrapper = result.children[0]
-    tdp_wrapper = result.children[1]
-
-    acv_graph = acv_wrapper.children
-    tdp_graph = tdp_wrapper.children
-    assert acv_graph.id == "tr-acv-chart"
-    assert tdp_graph.id == "tr-tdp-chart"
+    all_text = str(result)
+    assert "tr-acv-chart" in all_text
+    assert "tr-tdp-chart" in all_text
 
 
 def test_trends_layout_has_aria_labels():
@@ -37,10 +32,9 @@ def test_trends_layout_has_aria_labels():
     from app.views.trends import layout
 
     result = layout()
-    acv_wrapper = result.children[0]
-    tdp_wrapper = result.children[1]
-    assert "ACV" in str(acv_wrapper)
-    assert "TDP" in str(tdp_wrapper)
+    all_text = str(result)
+    assert "ACV" in all_text
+    assert "TDP" in all_text
 
 
 # -- ACV chart traces --

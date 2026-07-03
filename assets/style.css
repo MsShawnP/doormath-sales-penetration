@@ -211,9 +211,9 @@
 .gap-card-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-top: 16px;
-    margin-bottom: 24px;
+    gap: 20px;
+    margin-top: 24px;
+    margin-bottom: 32px;
 }
 
 @media (max-width: 1024px) {
@@ -422,6 +422,118 @@ select:focus {
 
 .all-selected .dash-dropdown-grid-container svg {
     grid-column: 2;
+}
+
+/* ── Term disclosure (click-to-expand definitions) ── */
+
+.term-disclosure,
+.term-disclosure-inline {
+    margin: 4px 0;
+}
+
+.term-toggle {
+    font-family: var(--ll-sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ll-chicago-20);
+    cursor: pointer;
+    padding: 4px 0;
+    list-style: none;
+    display: inline;
+}
+
+.term-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.term-toggle::before {
+    content: '▸ ';
+    color: var(--ll-london-35);
+    font-size: 11px;
+}
+
+.term-disclosure[open] > .term-toggle::before,
+.term-disclosure-inline[open] > .term-toggle::before {
+    content: '▾ ';
+}
+
+.term-toggle:hover {
+    color: var(--ll-chicago-10);
+}
+
+.term-toggle:focus-visible {
+    outline: 2px solid var(--ll-chicago-20);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.term-body {
+    font-family: var(--ll-sans);
+    font-size: 14px;
+    color: var(--ll-london-35);
+    line-height: 1.6;
+    margin: 4px 0 8px 14px;
+    max-width: 640px;
+}
+
+/* Glossary block — collapsible container with all terms */
+
+.glossary-block {
+    border-top: 1px solid var(--ll-london-85);
+    margin: 32px 0;
+    padding-top: 4px;
+}
+
+.glossary-toggle {
+    font-family: var(--ll-sans);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ll-chicago-20);
+    cursor: pointer;
+    padding: 16px 0;
+    list-style: none;
+}
+
+.glossary-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.glossary-toggle::before {
+    content: '▸ ';
+    color: var(--ll-london-35);
+}
+
+.glossary-block[open] > .glossary-toggle::before {
+    content: '▾ ';
+}
+
+.glossary-toggle:hover {
+    color: var(--ll-chicago-10);
+}
+
+.glossary-toggle:focus-visible {
+    outline: 2px solid var(--ll-chicago-20);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.glossary-content {
+    padding: 8px 0 16px;
+}
+
+.glossary-content .term-disclosure {
+    margin: 0;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--ll-london-90);
+}
+
+.glossary-content .term-disclosure:last-child {
+    border-bottom: none;
+}
+
+.glossary-content .term-toggle {
+    font-size: 14px;
+    padding: 8px 0;
 }
 
 /* Reduced motion */
