@@ -2,7 +2,19 @@
 
 ## Current phase
 
-Visual polish in progress. 3 of 6 identified bugs fixed, 2 remaining before redeploy. Position_dodge for TDP trace overlap designed but not yet implemented.
+Design-system compliance at 100%. All color tokens imported from `lailara_palette` package. Deployed and healthy.
+
+### Session 15 — Design-system compliance (2026-07-02)
+
+**Started from:** Gap chart used London-70 (disabled) for gap bars, hardcoded hex values throughout constants.py.
+
+**Did:**
+- Task A: Changed gap bar color from London-70 to Tokyo-70 (#e68a9a, "mild negative"), gap label text to Tokyo-15 bold. Later reverted to London-70/DISABLED for accessibility — teal-vs-rose is unreadable under red/green color-vision deficiency.
+- Task B: Vendored `lailara_palette` package (v2.1.0) into `packages/lailara-palette/`, replaced all ~40 hardcoded hex values in `app/constants.py` with imports from the package. Updated Dockerfile and pyproject.toml.
+- Task C: Fixed `economist_layout()` deep-merge bug — `defaults.update(overrides)` shallow-replaced dict keys, losing chart title font settings. Implemented one-level deep-merge. Verified color roles via DOM-eval (canvas, deltas, axis text, chart titles, gridlines).
+- All committed (`95f96a4`), deployed, verified with full proof report.
+
+**State:** `main` pushed to `origin/main` (`786d2c8`). 151 tests pass, 2 skip. Deployed and healthy. All color tokens sourced from `lailara_palette`.
 
 ## What was done (2026-06-15)
 

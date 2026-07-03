@@ -1,5 +1,13 @@
 # Door Math — Failures
 
+## 2026-07-02
+
+**Tokyo-70 gap bar failed accessibility under red/green CVD.**
+Used Tokyo-70 (#e68a9a, rose/berry) for the authorization-vs-scanning gap bar, paired with HK-35 (teal) for the scanning segment. Looked great under normal vision — two distinct hues for two semantically different segments. But teal and rose collapse to the same muddy olive under deuteranopia/protanopia, making the gap invisible. Reverted to London-70 (neutral grey), which is universally distinguishable. Lesson: when two bar segments sit side by side, check the pair under simulated CVD before committing, not just individually.
+
+**`economist_layout()` shallow merge silently dropped chart title fonts.**
+`defaults.update(overrides)` in `charts.py` replaced the entire `title` dict when a caller passed `title={"text": "My Chart"}`, losing the base font settings (`family`, `size`, `color`). Charts rendered with Plotly defaults (small, wrong font). Not caught until DOM-eval during the design-system compliance pass because the visual difference was subtle on some charts. Lesson: when a function merges a nested config dict, verify it's deep-merging, not shallow-replacing.
+
 ## 2026-06-15
 
 **app.py / app/ Python import collision (caught in plan review, not production).**

@@ -1,5 +1,16 @@
 # Door Math — Decisions
 
+## 2026-07-02 — Design-system compliance
+
+**All hex values sourced from `lailara_palette` package, not hardcoded.**
+Vendored `lailara-palette` (v2.1.0) into `packages/lailara-palette/`. Replaced all ~40 hardcoded hex values in `app/constants.py` with imports. Semantic aliases (`ACCENT`, `DELTA_POS`, `GAP_BAR`, etc.) still exist but now reference palette tokens, not raw strings. Single source of truth for the entire Cinderhaven suite.
+
+**Gap bar stays London-70 (DISABLED), not Tokyo-70.**
+Tried Tokyo-70 (#e68a9a, rose/berry) for the authorization gap bar — visually distinct from HK teal, reads as "mild negative." Reverted because the gap chart uses HK-35 (teal) for scanning bars alongside the gap bars, and teal-vs-rose is unreadable under red/green color-vision deficiency (deuteranopia/protanopia). London-70 (grey) is universally distinguishable from teal. Accessibility trumps semantic color.
+
+**`economist_layout()` uses one-level deep merge, not shallow `dict.update()`.**
+`defaults.update(overrides)` shallow-replaced dict keys like `title.font`, losing the base chart-title font settings (family, size, color) whenever an override only set `title.text`. Fixed with a one-level deep merge that preserves nested dict values not explicitly overridden.
+
 ## 2026-06-15 — Brainstorm phase
 
 **Stack: Keep Python/Dash, don't switch to React.**
