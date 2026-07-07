@@ -4,11 +4,7 @@
 
 Of the stores that could carry an item, how many actually do — and is that number growing or quietly eroding? Distribution penetration is the denominator for everything downstream: velocity, household penetration, repeat rates. Most brands cannot state theirs accurately by retailer. Door Math tracks door counts, ACV%, TDP, and the gap between authorized and scanning stores.
 
-## Cinderhaven context
-
-Built on the Cinderhaven synthetic dataset — a ~$25M specialty food brand, 50 SKUs across 5 product lines and 6 contracted retailers. Data is synthetic; methodology and deliverables are real.
-
-## What it finds
+## What it does
 
 - **% of addressable doors carrying** — authorized doors / total addressable doors, by item
 - **Weighted distribution (ACV%)** — % of all-commodity volume flowing through carrying stores
@@ -18,16 +14,13 @@ Built on the Cinderhaven synthetic dataset — a ~$25M specialty food brand, 50 
 
 Four views: Door Count (current state), Trends (ACV%/TDP trajectory), Exceptions (authorized-but-not-scanning), Scorecard (one-page PDF summary).
 
-## Stack
+## Why it matters
 
-- Python 3.11+
-- Dash 3.x / Plotly (SVG charts)
-- dash-ag-grid (exception table)
-- pandas / numpy
-- WeasyPrint (PDF scorecard)
-- Jinja2 (PDF template)
-- Gunicorn
-- Fly.io (1024MB, auto-stop)
+Every downstream sales metric divides by distribution — get the denominator wrong and velocity, forecasts, and trade-spend ROI are all wrong with it. Doors rarely disappear all at once; they leak one store at a time, below the threshold any topline report will flag. A brand that can state its penetration by retailer, see the trend, and catch the leak early negotiates resets from evidence instead of memory.
+
+## Cinderhaven context
+
+Built on the Cinderhaven synthetic dataset — a ~$25M specialty food brand, 50 SKUs across 5 product lines and 6 contracted retailers. Data is synthetic; methodology and deliverables are real.
 
 ## Data contract
 
@@ -35,7 +28,7 @@ Four views: Door Count (current state), Trends (ACV%/TDP trajectory), Exceptions
 
 Extended with a shared store universe package (`packages/cinderhaven-store-universe/`): 640 doors across 6 retailers with volume tiers, an authorization matrix with deliberate gaps, weekly POS scan data (Q1 2024 – Q4 2025), and two slow-leak distribution stories.
 
-## Run
+## Quick start
 
 ```
 git clone <repo-url>
@@ -76,28 +69,23 @@ docker run -p 8050:8050 doormath
 python -m pytest tests/ packages/cinderhaven-store-universe/tests/ -v
 ```
 
-## Mobile testing checklist
+## Tech stack
 
-- [ ] Tabs scroll horizontally at 375px (no vertical stack)
-- [ ] Filter bar collapses — "Filters" toggle button expands full-width panel
-- [ ] Charts scroll horizontally within container (min-width 600px)
-- [ ] AG Grid scrolls horizontally with frozen SKU ID column
-- [ ] Annotations collapse to inline icon, tap to expand, tap/scroll to dismiss
-- [ ] PDF download button hidden on mobile
-- [ ] Hero metric font scales (64px → 44px)
-- [ ] Brand frame header wraps at narrow viewports
-- [ ] No horizontal page overflow at 375px
+- Python 3.11+
+- Dash 3.x / Plotly (SVG charts)
+- dash-ag-grid (exception table)
+- pandas / numpy
+- WeasyPrint + Jinja2 (PDF scorecard)
+- Gunicorn, Docker
+- Fly.io (1024MB, auto-stop)
 
-## Accessibility testing checklist
+## Quality notes
 
-- [ ] Tab navigation via arrow keys works (Dash built-in)
-- [ ] Focus-visible outlines appear on interactive elements (2px solid)
-- [ ] Charts have `aria-label` describing the data summary
-- [ ] AG Grid keyboard navigation works (built-in)
-- [ ] Skip-to-content link is present and functional
-- [ ] `prefers-reduced-motion`: number animations snap, transitions instant
-- [ ] Color is never the sole identification channel — every data point has a text label
-- [ ] Contrast ratio meets WCAG AA (4.5:1 for text, 3:1 for UI components)
+The app targets mobile layouts down to 375px (horizontal-scrolling tabs and charts, collapsible filters, frozen grid columns) and WCAG AA accessibility (keyboard navigation, focus-visible outlines, aria-labeled charts, `prefers-reduced-motion` support, 4.5:1 text contrast, no color-only encoding).
+
+## License
+
+MIT
 
 ---
 
