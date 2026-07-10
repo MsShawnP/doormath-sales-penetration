@@ -26,10 +26,8 @@ def _build_intro():
         [
             html.H1("Distribution Penetration Tracker"),
             html.P(
-                "Monitoring which stores are actually carrying your products "
-                "versus which were authorized. Built on synthetic data from "
-                "Cinderhaven, a fictional $25M specialty food brand, to "
-                "demonstrate the analytics without exposing client data."
+                "Which stores should carry your product but don't — "
+                "and where is that gap widening?"
             ),
             glossary_block(),
         ],

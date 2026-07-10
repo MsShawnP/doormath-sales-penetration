@@ -43,8 +43,8 @@ TERM_DEFINITIONS = {
         "Authorization-to-scan gap (“the gap”)",
         "Item-store pairs that are authorized but not currently scanning. The "
         "retailer said yes, but nothing is selling — the product isn’t on the "
-        "shelf, or isn’t moving. This delta is where authorized distribution "
-        "quietly leaks revenue.",
+        "shelf, or isn’t moving. Each gap pair is a missed opportunity: shelf "
+        "space was promised but isn’t generating scans.",
     ),
     "door_count": (
         "% of addressable doors carrying (door count)",
@@ -52,12 +52,13 @@ TERM_DEFINITIONS = {
         "carry it — as a count and a percentage.",
     ),
     "acv": (
-        "ACV% (weighted distribution)",
-        "All-Commodity Volume–weighted distribution: the percentage of total retail "
-        "sales volume flowing through the stores that carry your item. It weights "
-        "stores by size, so being in 30% of the largest stores is worth far more "
-        "reach than 30% of small ones. Unlike a raw store count, ACV% reflects "
-        "the commercial value of where you’re distributed.",
+        "ACV% (tier-weighted distribution)",
+        "The share of addressable store weight accounted for by stores carrying "
+        "your item. Stores are weighted by volume tier (A = 3, B = 2, C = 1) as "
+        "a proxy for actual dollar volume. Being in 30% of the largest stores is "
+        "worth far more reach than 30% of small ones. Computed per item-retailer "
+        "pair, not aggregated across items — so ACV% for a product line is the "
+        "average of its item-level figures, not a single weighted sum.",
     ),
     "tdp": (
         "TDP (Total Distribution Points)",

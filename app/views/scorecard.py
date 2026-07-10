@@ -623,7 +623,10 @@ def _update_scorecard(filter_json, active_tab):
     # Headline insight cards (above tables, no scroll needed)
     headline_cards = []
     if data["retailer_rows"]:
-        widest = max(data["retailer_rows"], key=lambda r: r["addressable"] - r["carrying"])
+        widest = max(
+            data["retailer_rows"],
+            key=lambda r: (1 - r["penetration"]) if r["addressable"] > 0 else 0,
+        )
         gap = widest["addressable"] - widest["carrying"]
         if gap > 0:
             gap_pct = 1 - widest["penetration"]
