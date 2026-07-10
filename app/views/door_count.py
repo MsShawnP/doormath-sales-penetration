@@ -11,6 +11,7 @@ from dash import Input, Output, State, callback, dcc, html, no_update
 from app.calculations import filter_auth, prior_quarter, quarters_in_range
 from app.charts import CHART_CONFIG, economist_layout
 from app.components import (
+    chart_footnote,
     dark_callout_card,
     term_disclosure,
     unfiltered_data_callout,
@@ -496,6 +497,11 @@ def layout():
                 ),
                 **{"aria-label": "Authorized versus carrying doors by retailer"},
             ),
+            chart_footnote(
+                "Source: Cinderhaven synthetic store universe. Scanning = authorized "
+                "item-store pairs with a recorded scan in the selected end quarter. "
+                "Gap = authorized pairs with no scan that quarter."
+            ),
             term_disclosure("gap", inline=True),
             html.Div(id="dc-callout-area"),
             html.Div(id="dc-auth-gap-annotations"),
@@ -506,6 +512,11 @@ def layout():
                 ),
                 style={"marginTop": "56px"},
                 **{"aria-label": "Carrying doors by product line and retailer"},
+            ),
+            chart_footnote(
+                "Source: Cinderhaven synthetic store universe. Counts reflect authorized "
+                "item-store pairs with at least one recorded scan across the selected "
+                "quarter range, grouped by product line and retailer."
             ),
             term_disclosure("door_count", inline=True),
             dcc.Store(id="dc-pinned-retailer", data=None),

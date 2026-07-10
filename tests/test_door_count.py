@@ -79,6 +79,19 @@ def test_annotation_callout_renders():
     assert callout.children.children == "Some insight text here."
 
 
+def test_chart_footnote_renders():
+    """chart_footnote() returns a muted italic html.P per the design system spec."""
+    from app.components import chart_footnote
+    from app.constants import TEXT_SECONDARY
+
+    footnote = chart_footnote("Source: Test data.")
+    assert footnote.className == "chart-footnote"
+    assert footnote.children == "Source: Test data."
+    assert footnote.style["fontStyle"] == "italic"
+    assert footnote.style["fontSize"] == "11px"
+    assert footnote.style["color"] == TEXT_SECONDARY
+
+
 def test_error_banner_renders():
     """error_banner() returns a Div with error-banner class."""
     from app.components import error_banner
@@ -126,6 +139,16 @@ def test_hero_metric_valid_percentage():
     assert carrying >= 0
     assert addressable > 0
     assert carrying <= addressable
+
+
+def test_door_count_layout_has_chart_footnotes():
+    """Door Count layout includes a source/methodology footnote below each chart."""
+    from app.views.door_count import layout
+
+    result = layout()
+    all_text = str(result)
+    assert "chart-footnote" in all_text
+    assert all_text.count("Source: Cinderhaven") == 2
 
 
 def test_retailer_bar_chart_has_correct_groups():

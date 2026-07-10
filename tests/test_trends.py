@@ -116,6 +116,71 @@ def test_tdp_chart_values_are_positive():
             assert y_val >= 0, f"TDP value {y_val} should not be negative"
 
 
+# -- Per-point text labels --
+
+
+def test_acv_chart_every_point_has_a_text_label():
+    """Every trace on the ACV% chart (median + each retailer) labels every point,
+    not just the endpoint."""
+    from app.calculations import quarters_in_range
+    from app.views.trends import _build_acv_chart, _compute_acv_by_retailer
+
+    quarters = quarters_in_range("Q1 2025", "Q4 2025")
+    acv_data = _compute_acv_by_retailer(DEFAULT_FILTER_STATE, quarters)
+    fig = _build_acv_chart(acv_data, quarters)
+
+    for trace in fig.data:
+        assert "text" in trace.mode, f"{trace.name} mode {trace.mode} does not render text"
+        assert trace.text is not None
+        assert len(trace.text) == len(quarters)
+        assert all(t for t in trace.text), f"{trace.name} has an empty label somewhere"
+
+
+def test_tdp_chart_every_point_has_a_text_label():
+    """Every trace on the TDP chart (median + each retailer) labels every point,
+    not just the endpoint."""
+    from app.calculations import quarters_in_range
+    from app.views.trends import _build_tdp_chart, _compute_tdp_by_retailer
+
+    quarters = quarters_in_range("Q1 2025", "Q4 2025")
+    tdp_data = _compute_tdp_by_retailer(DEFAULT_FILTER_STATE, quarters)
+    fig = _build_tdp_chart(tdp_data, quarters)
+
+    for trace in fig.data:
+        assert "text" in trace.mode, f"{trace.name} mode {trace.mode} does not render text"
+        assert trace.text is not None
+        assert len(trace.text) == len(quarters)
+        assert all(t for t in trace.text), f"{trace.name} has an empty label somewhere"
+
+
+# -- Y-axis range --
+
+
+def test_acv_chart_y_axis_starts_at_zero():
+    """ACV% chart y-axis range always starts at 0, regardless of data range."""
+    from app.calculations import quarters_in_range
+    from app.views.trends import _build_acv_chart, _compute_acv_by_retailer
+
+    quarters = quarters_in_range("Q1 2025", "Q4 2025")
+    acv_data = _compute_acv_by_retailer(DEFAULT_FILTER_STATE, quarters)
+    fig = _build_acv_chart(acv_data, quarters)
+
+    assert fig.layout.yaxis.range[0] == 0
+
+
+# -- Footnotes --
+
+
+def test_trends_layout_has_chart_footnotes():
+    """Trends layout includes a source/methodology footnote below each chart."""
+    from app.views.trends import layout
+
+    result = layout()
+    all_text = str(result)
+    assert "chart-footnote" in all_text
+    assert all_text.count("Source: Cinderhaven") == 2
+
+
 # -- Filter changes --
 
 

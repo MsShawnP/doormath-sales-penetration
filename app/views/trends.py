@@ -16,6 +16,7 @@ from app.calculations import (
 )
 from app.charts import CHART_CONFIG, economist_layout
 from app.components import (
+    chart_footnote,
     dark_callout_card,
     stat_card,
     stat_card_row,
@@ -172,15 +173,20 @@ def _add_endline_labels(fig, labels, min_gap_pct=2.5):
         )
 
 
-def _auto_y_range(all_values, suffix_pct=False):
-    """Compute a Y-axis range with ~10% padding around the data extremes."""
+def _auto_y_range(all_values, suffix_pct=False, start_at_zero=False):
+    """Compute a Y-axis range with ~10% padding around the data extremes.
+
+    start_at_zero forces the lower bound to 0 instead of trimming to the
+    data minimum — used for ACV% so the chart never visually exaggerates
+    the gap between retailers.
+    """
     if not all_values:
         return None
     data_min = min(all_values)
     data_max = max(all_values)
     span = data_max - data_min
     padding = max(span * 0.15, 2.0)
-    y_min = max(0, data_min - padding)
+    y_min = 0 if start_at_zero else max(0, data_min - padding)
     y_max = data_max + padding
     if suffix_pct:
         y_max = min(100, y_max)
@@ -192,7 +198,8 @@ def _build_acv_chart(acv_data, quarters, selected_point=None):
 
     Each retailer gets a unique color, line dash, and marker symbol so all 6
     lines are visually distinguishable even when values cluster tightly.
-    Y-axis auto-scales to the data range instead of starting at 0%.
+    Y-axis always starts at 0% so the gap between retailers is never
+    visually exaggerated by a trimmed axis.
     """
     fig = go.Figure()
 
@@ -212,15 +219,18 @@ def _build_acv_chart(acv_data, quarters, selected_point=None):
         go.Scatter(
             x=quarters,
             y=median_pcts,
-            mode="lines",
+            mode="lines+text",
             name="Median",
             line=dict(color=REFERENCE, dash="dash", width=2),
             showlegend=True,
             hovertemplate="Median: %{y:.1f}%<extra></extra>",
+            text=[f"{v:.1f}%" for v in median_pcts],
+            textposition="bottom center",
+            textfont=dict(family=FONT_SANS, size=9, color=REFERENCE),
         )
     )
 
-    for ret_id in sorted(acv_data.keys()):
+    for idx, ret_id in enumerate(sorted(acv_data.keys())):
         color = RETAILER_COLORS.get(ret_id, TEAL_SEQUENTIAL[0])
         dash = RETAILER_LINE_STYLES.get(ret_id, "solid")
         symbol = RETAILER_MARKERS.get(ret_id, "circle")
@@ -237,16 +247,21 @@ def _build_acv_chart(acv_data, quarters, selected_point=None):
             go.Scatter(
                 x=quarters,
                 y=pct_values,
-                mode="lines+markers",
+                mode="lines+markers+text",
                 name=name,
                 line=dict(color=color, width=2.5, dash=dash),
                 marker=dict(color=color, size=8, symbol=symbol),
                 opacity=opacity,
                 customdata=[ret_id] * len(quarters),
+                text=[f"{v:.1f}%" for v in pct_values],
+                textposition="top center" if idx % 2 == 0 else "bottom center",
+                textfont=dict(family=FONT_SANS, size=10, color=color),
             )
         )
 
-    y_range = _auto_y_range(all_pct_values, suffix_pct=True)
+    # Y-axis starts at 0 — ACV% must never visually exaggerate small gaps
+    # between retailers by trimming the axis to the data minimum.
+    y_range = _auto_y_range(all_pct_values, suffix_pct=True, start_at_zero=True)
 
     # End-of-line labels for each retailer
     endline = []
@@ -360,15 +375,18 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
         go.Scatter(
             x=quarters,
             y=median_vals,
-            mode="lines",
+            mode="lines+text",
             name="Median",
             line=dict(color=REFERENCE, dash="dash", width=2),
             showlegend=True,
             hovertemplate="Median: %{y:.1f} pts<extra></extra>",
+            text=[f"{v:.1f}" for v in median_vals],
+            textposition="bottom center",
+            textfont=dict(family=FONT_SANS, size=9, color=REFERENCE),
         )
     )
 
-    for ret_id in sorted(tdp_data.keys()):
+    for idx, ret_id in enumerate(sorted(tdp_data.keys())):
         color = RETAILER_COLORS.get(ret_id, TEAL_SEQUENTIAL[0])
         dash = RETAILER_LINE_STYLES.get(ret_id, "solid")
         symbol = RETAILER_MARKERS.get(ret_id, "circle")
@@ -385,13 +403,15 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
             go.Scatter(
                 x=quarters,
                 y=[round(v, 1) for v in plot_values],
-                mode="lines+markers",
+                mode="lines+markers+text",
                 name=name,
                 line=dict(color=color, width=2.5, dash=dash),
                 marker=dict(color=color, size=8, symbol=symbol),
                 opacity=opacity,
                 customdata=[ret_id] * len(quarters),
                 text=[f"{v:.1f}" for v in true_values],
+                textposition="top center" if idx % 2 == 0 else "bottom center",
+                textfont=dict(family=FONT_SANS, size=10, color=color),
                 hovertemplate="%{x}<br>TDP: %{text}<extra>%{fullData.name}</extra>",
             )
         )
@@ -459,6 +479,11 @@ def layout():
                 ),
                 **{"aria-label": "ACV percent trend by retailer over time"},
             ),
+            chart_footnote(
+                "Source: Cinderhaven synthetic POS scan data. ACV% is all-commodity-volume-"
+                "weighted distribution across authorized item-store pairs, by quarter. "
+                "Dashed line is the cross-retailer median. Y-axis starts at 0."
+            ),
             term_disclosure("acv", inline=True),
             html.Div(
                 dcc.Graph(
@@ -467,6 +492,11 @@ def layout():
                 ),
                 style={"marginTop": "56px"},
                 **{"aria-label": "TDP trend by retailer over time"},
+            ),
+            chart_footnote(
+                "Source: Cinderhaven synthetic POS scan data. TDP sums ACV% across all "
+                "authorized items in the active filter, by quarter. Dashed line is the "
+                "cross-retailer median."
             ),
             term_disclosure("tdp", inline=True),
             html.Div(id="tr-callout-area"),

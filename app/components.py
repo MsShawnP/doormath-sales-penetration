@@ -307,6 +307,30 @@ def td_style(bg=WHITE, align="left", color=None):
     }
 
 
+def chart_footnote(text):
+    """Muted italic footnote for below a chart — source/methodology note.
+
+    Per the Lailara chart system: every chart gets a footnote (source,
+    exclusions, methodology). Not optional.
+
+    Returns:
+        html.P styled per the design system footnote spec
+        (Source Sans 3, 11px, italic, London-35).
+    """
+    return html.P(
+        text,
+        className="chart-footnote",
+        style={
+            "fontFamily": FONT_SANS,
+            "fontSize": "11px",
+            "fontStyle": "italic",
+            "color": TEXT_SECONDARY,
+            "margin": "8px 0 0 0",
+            "lineHeight": "1.4",
+        },
+    )
+
+
 def unfiltered_data_callout(filters):
     """Return a callout when empty filter lists silently default to all data."""
     retailers = filters.get("retailers")
