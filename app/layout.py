@@ -86,7 +86,7 @@ def register_layout():
     app.layout = lailara_frame.wrap(
         inner_layout,
         tool_name="Door Math",
-        footer_note="Distribution penetration tracker for CPG brands.",
+        footer_note="Distribution penetration tracker for CPG brands. Data: Cinderhaven Provisions, a synthetic demonstration dataset (not a client).",
         no_container=True,
     )
 
