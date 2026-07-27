@@ -130,13 +130,11 @@
     padding: var(--ll-space-xl) 0;
 }
 
+/* Pairs with .ll-headline-number from the frame, which carries the DS serif,
+   64/44px steps, weight and letter-spacing.  Only the bits the frame has no
+   opinion on live here. */
 .hero-number {
-    font-family: var(--ll-serif);
-    font-size: 64px;
-    font-weight: 700;
     color: var(--ll-london-5);
-    letter-spacing: -0.02em;
-    line-height: 1;
     display: inline-block;
     vertical-align: baseline;
 }
@@ -226,7 +224,7 @@
 @media (max-width: 640px) {
     .tool-intro h1 { font-size: 16px; }
 
-    .hero-number { font-size: 44px; }
+    /* .hero-number's 44px mobile step comes from .ll-headline-number. */
     .hero-subtext { font-size: 15px; }
     .hero-trend { font-size: 15px; }
 

@@ -433,7 +433,7 @@ def layout():
                 [
                     html.Div(
                         id="sc-hero-pct",
-                        className="hero-number",
+                        className="ll-headline-number hero-number",
                     ),
                     html.P(
                         "of authorized item-store pairs currently scanning",
