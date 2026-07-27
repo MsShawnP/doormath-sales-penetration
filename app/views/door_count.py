@@ -355,9 +355,12 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
         **economist_layout(
             barmode="stack",
             title=dict(text="Authorization-to-Scan Gap by Retailer"),
+            # No gridlines on the value axis: these are horizontal bars, so an
+            # x-axis grid paints vertically.  DS Chart System is explicit —
+            # horizontal only, no exception for bar orientation.  Every bar is
+            # labelled, so the grid was not carrying the values anyway.
             xaxis=dict(
-                showgrid=True,
-                gridcolor=GRIDLINE,
+                showgrid=False,
                 title=None,
                 range=[0, max_total * 1.08],
             ),
@@ -420,9 +423,9 @@ def _build_product_line_chart(pl_data):
         **economist_layout(
             barmode="group",
             title=dict(text="Scanning Pairs by Product Line"),
+            # Horizontal bars — see the gap chart above.
             xaxis=dict(
-                showgrid=True,
-                gridcolor=GRIDLINE,
+                showgrid=False,
                 title=None,
             ),
             yaxis=dict(
