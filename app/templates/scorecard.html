@@ -223,7 +223,8 @@
       <th>SKU ID</th>
       <th>Item Name</th>
       <th>Retailer</th>
-      <th class="right">Weeks Silent</th>
+      <th class="right">Stores</th>
+      <th class="right">Max Weeks Silent</th>
     </tr>
   </thead>
   <tbody>
@@ -232,6 +233,7 @@
       <td>{{ exc.sku_id }}</td>
       <td>{{ exc.item_name }}</td>
       <td>{{ exc.retailer }}</td>
+      <td class="right">{{ exc.stores }}</td>
       <td class="right{% if exc.weeks_silent > 12 %} weeks-high{% endif %}">{{ exc.weeks_silent }}</td>
     </tr>
     {% endfor %}

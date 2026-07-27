@@ -207,9 +207,16 @@ def _compute_scorecard_data(filters):
                 ),
                 max_weeks=("weeks_silent", "max"),
             )
-            .sort_values("max_weeks", ascending=False)
-            .head(10)
             .reset_index()
+            # Rank by silent-store count, matching the Exceptions tab.  Ranking by
+            # max weeks silent is degenerate: every SKU has at least one pair that
+            # never scanned in the window, so max_weeks is the 104 sentinel for all
+            # 50 SKUs and .head(10) just returned the alphabetically-first ten.
+            .sort_values(
+                ["stores", "max_weeks", "sku_id"],
+                ascending=[False, False, True],
+            )
+            .head(10)
         )
         for _, row in sku_agg.iterrows():
             top_exceptions.append(
@@ -659,11 +666,13 @@ def _update_scorecard(filter_json, active_tab):
             )
 
     if data["top_exceptions"]:
+        # top_exceptions is ranked by silent-store count, so [0] is the widest
+        # void, not the longest silence.  Label it as what it is.
         worst = data["top_exceptions"][0]
         bottom_cards.append(
             stat_card(
-                f"{worst['weeks_silent']} wks",
-                f"longest silence — {worst['item_name']} at {worst['retailer']}",
+                f"{worst['stores']:,}",
+                f"stores authorized but silent — {worst['item_name']}",
             )
         )
 
