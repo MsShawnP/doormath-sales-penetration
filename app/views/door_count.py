@@ -644,6 +644,24 @@ def _toggle_pinned_retailer(click_data, current_pinned):
 
 
 @callback(
+    Output("dc-pinned-retailer", "data", allow_duplicate=True),
+    Input("filter-state", "data"),
+    State("dc-pinned-retailer", "data"),
+    prevent_initial_call=True,
+)
+def _clear_pin_on_filter_change(_filter_json, current_pin):
+    """Drop the pinned retailer when the filters change.
+
+    The callout callback below reads filter-state as State, so it cannot
+    recompute itself.  Left pinned, the card would keep showing pair counts
+    from the previous selection with nothing marking them stale.
+    """
+    if not current_pin:
+        return no_update
+    return None
+
+
+@callback(
     Output("dc-callout-area", "children"),
     Output("dc-retailer-chart", "figure", allow_duplicate=True),
     Input("dc-pinned-retailer", "data"),

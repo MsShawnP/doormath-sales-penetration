@@ -596,6 +596,26 @@ def _toggle_tdp_pin(click_data, current_pinned):
 
 
 @callback(
+    Output("tr-pinned-acv", "data", allow_duplicate=True),
+    Output("tr-pinned-tdp", "data", allow_duplicate=True),
+    Input("filter-state", "data"),
+    State("tr-pinned-acv", "data"),
+    State("tr-pinned-tdp", "data"),
+    prevent_initial_call=True,
+)
+def _clear_pins_on_filter_change(_filter_json, acv_pin, tdp_pin):
+    """Drop both chart pins when the filters change.
+
+    Same reasoning as the Door Count view: the callout callback below reads
+    filter-state as State and cannot recompute itself, so a surviving pin
+    would keep stale values on screen.
+    """
+    if not acv_pin and not tdp_pin:
+        return no_update, no_update
+    return None, None
+
+
+@callback(
     Output("tr-callout-area", "children"),
     Output("tr-acv-chart", "figure", allow_duplicate=True),
     Output("tr-tdp-chart", "figure", allow_duplicate=True),
