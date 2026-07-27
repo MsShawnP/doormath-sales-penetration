@@ -21,7 +21,6 @@ from app.constants import (
     CANVAS,
     CHICAGO_20,
     FONT_SANS,
-    FONT_SERIF,
     INK,
     TEXT_SECONDARY,
     TOKYO_20,
@@ -340,10 +339,8 @@ def layout():
                 [
                     html.H3(
                         "Exceptions by Item",
+                        className="ll-section-title",
                         style={
-                            "fontFamily": FONT_SERIF,
-                            "fontSize": "22px",
-                            "fontWeight": "700",
                             "color": INK,
                             "marginBottom": "12px",
                         },
@@ -357,10 +354,8 @@ def layout():
                 [
                     html.H3(
                         "Exception Detail",
+                        className="ll-section-title",
                         style={
-                            "fontFamily": FONT_SERIF,
-                            "fontSize": "22px",
-                            "fontWeight": "700",
                             "color": INK,
                             "marginBottom": "12px",
                         },
@@ -463,12 +458,9 @@ def _update_exceptions_view(filter_json, active_tab):
                             [
                                 html.Span(
                                     fmt_number(stats["total_exceptions"]),
+                                    className="ll-benchmark-value",
                                     style={
-                                        "fontFamily": FONT_SERIF,
-                                        "fontSize": "36px",
-                                        "fontWeight": "700",
                                         "color": INK,
-                                        "letterSpacing": "-0.02em",
                                     },
                                 ),
                                 html.Span(

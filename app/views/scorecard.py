@@ -33,7 +33,6 @@ from app.constants import (
     CANVAS,
     CHICAGO_20,
     FONT_SANS,
-    FONT_SERIF,
     INK,
     TEXT_SECONDARY,
     TOKYO_40,
@@ -457,10 +456,8 @@ def layout():
                 [
                     html.H3(
                         "Retailer Summary",
+                        className="ll-section-title",
                         style={
-                            "fontFamily": FONT_SERIF,
-                            "fontSize": "22px",
-                            "fontWeight": "700",
                             "color": INK,
                             "marginBottom": "12px",
                         },
@@ -474,10 +471,8 @@ def layout():
                 [
                     html.H3(
                         "Product Line Summary",
+                        className="ll-section-title",
                         style={
-                            "fontFamily": FONT_SERIF,
-                            "fontSize": "22px",
-                            "fontWeight": "700",
                             "color": INK,
                             "marginBottom": "12px",
                         },
@@ -491,10 +486,8 @@ def layout():
                 [
                     html.H3(
                         "Top Exceptions",
+                        className="ll-section-title",
                         style={
-                            "fontFamily": FONT_SERIF,
-                            "fontSize": "22px",
-                            "fontWeight": "700",
                             "color": INK,
                             "marginBottom": "12px",
                         },

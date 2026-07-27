@@ -19,7 +19,6 @@ from app.components import (
 from app.constants import (
     CATEGORICAL_6,
     FONT_SANS,
-    FONT_SERIF,
     GAP_BAR,
     GRIDLINE,
     INK,
@@ -179,13 +178,9 @@ def _gap_card(data):
     children = [
         html.Div(
             data["value"],
+            className="ll-benchmark-value",
             style={
-                "fontFamily": FONT_SERIF,
-                "fontSize": "28px",
-                "fontWeight": "700",
                 "color": INK,
-                "letterSpacing": "-0.02em",
-                "lineHeight": "1",
             },
         ),
         html.P(

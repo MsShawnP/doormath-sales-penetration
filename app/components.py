@@ -12,7 +12,6 @@ from app.constants import (
     CARD_TEXT,
     FAIL_BG,
     FONT_SANS,
-    FONT_SERIF,
     GRIDLINE,
     INK,
     RED_42,
@@ -208,13 +207,9 @@ def stat_card(value, label):
         [
             html.Div(
                 value,
+                className="ll-benchmark-value",
                 style={
-                    "fontFamily": FONT_SERIF,
-                    "fontSize": "36px",
-                    "fontWeight": "700",
                     "color": INK,
-                    "letterSpacing": "-0.02em",
-                    "lineHeight": "1",
                 },
             ),
             html.P(
