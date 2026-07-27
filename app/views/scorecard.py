@@ -123,6 +123,11 @@ def _compute_scorecard_data(filters):
         else:
             delta = 0.0
 
+        # Same reasoning as the product-line loop below: a retailer with no
+        # authorized pairs under the current filters was never measured.
+        if addr == 0:
+            continue
+
         retailer_rows.append(
             {
                 "name": _RET_NAMES.get(ret_id, ret_id),
@@ -170,6 +175,12 @@ def _compute_scorecard_data(filters):
             delta = calc_period_delta(pen, prior_pen)
         else:
             delta = 0.0
+
+        # A line with no authorized pairs under the current filters was never
+        # measured.  Emitting a 0-of-0 / 0.0% row lets the "lowest penetration"
+        # card below name a line the filters excluded.
+        if addr == 0:
+            continue
 
         product_line_rows.append(
             {
