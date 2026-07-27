@@ -92,7 +92,7 @@ def _compute_scorecard_data(filters):
     quarters_batch = [end_q] + ([prior_q] if prior_q else [])
 
     acv_by_ret = batch_acv_by_retailer(quarters_batch, active_retailers, product_lines or None, sku)
-    tdp_by_ret = batch_tdp_by_retailer(quarters_batch, active_retailers, product_lines or None)
+    tdp_by_ret = batch_tdp_by_retailer(quarters_batch, active_retailers, product_lines or None, sku)
 
     auth_all = filter_auth(retailers=active_retailers, product_lines=product_lines or None, sku=sku)
     auth_pairs = auth_all[["sku_id", "store_id", "retailer_id"]].drop_duplicates()

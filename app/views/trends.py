@@ -72,10 +72,12 @@ def _compute_tdp_by_retailer(filters, quarters):
     """Compute TDP per retailer per quarter in a single batch pass."""
     retailers = filters.get("retailers", [])
     product_lines = filters.get("product_lines", [])
+    sku = filters.get("sku")
     return batch_tdp_by_retailer(
         quarters,
         retailers,
         product_lines=product_lines if product_lines else None,
+        sku=sku,
     )
 
 

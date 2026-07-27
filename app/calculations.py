@@ -138,13 +138,15 @@ def calc_acv_pct(quarter, retailers=None, product_lines=None, sku=None):
     return carrying_weight / total_weight
 
 
-def calc_tdp(quarter, retailers=None, product_lines=None):
+def calc_tdp(quarter, retailers=None, product_lines=None, sku=None):
     """Calculate TDP (Total Distribution Points) -- sum of ACV% across items.
 
     Vectorized: computes per-SKU ACV% in a single groupby instead of looping.
+    Takes ``sku`` so it stays signature-compatible with batch_tdp_by_retailer,
+    which it is the reference implementation for.
     Returns a float (total points, not bounded by 1).
     """
-    auth = filter_auth(retailers, product_lines)
+    auth = filter_auth(retailers, product_lines, sku)
     addressable_ids = set(auth["store_id"].unique())
     if not addressable_ids:
         return 0.0
@@ -197,12 +199,16 @@ def batch_acv_by_retailer(quarters, retailers, product_lines=None, sku=None):
     return result
 
 
-def batch_tdp_by_retailer(quarters, retailers, product_lines=None):
+def batch_tdp_by_retailer(quarters, retailers, product_lines=None, sku=None):
     """Compute TDP for every (retailer, quarter) pair in one pass.
+
+    Honours ``sku`` so a single-item selection reports that item's distribution
+    rather than its whole product line's — otherwise one column of the scorecard
+    describes a different selection than the columns beside it.
 
     Returns dict: {retailer_id: {quarter_str: float}}.
     """
-    auth = filter_auth(retailers=retailers, product_lines=product_lines)
+    auth = filter_auth(retailers=retailers, product_lines=product_lines, sku=sku)
     if auth.empty:
         return {r: {q: 0.0 for q in quarters} for r in retailers}
 
