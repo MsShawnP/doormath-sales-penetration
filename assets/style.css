@@ -119,9 +119,10 @@
     gap: var(--ll-space-sm);
 }
 
-/* Loading spinner override */
+/* Loading spinner override — derived from the canvas token, not a copy of its
+   rgb expansion, so retuning --ll-canvas moves the overlay with it. */
 ._dash-loading-callback {
-    background-color: rgba(245, 243, 238, 0.7) !important;
+    background-color: color-mix(in srgb, var(--ll-canvas) 70%, transparent) !important;
 }
 
 /* Hero metric */
@@ -184,7 +185,7 @@
     display: flex;
     justify-content: space-between;
     padding: var(--ll-space-xs) 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    border-bottom: 1px solid var(--ll-card-border);
     font-family: var(--ll-sans);
     font-size: 14px;
     color: var(--ll-card-item);

@@ -198,6 +198,11 @@
   --ll-london-5:       #0d0d0d;
 
   /* Dark card tokens */
+  /* Print paper. Not a palette family — the DS replaces London-100 with the
+     warm canvas for screen, and real paper supplies its own warmth. Declared
+     here so the print block has a token instead of a raw literal. */
+  --ll-paper:          #ffffff;
+
   --ll-card-bg:        #1a1a1a;
   --ll-card-text:      #ffffff;
   --ll-card-subtitle:  #d8d8d8;
@@ -520,7 +525,7 @@ body {
   body,
   .lailara-page,
   .lailara-container {
-    background-color: #ffffff !important;
+    background-color: var(--ll-paper) !important;
   }
 
   .lailara-container {

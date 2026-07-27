@@ -51,7 +51,10 @@ from lailara_palette import (
 DEMO_AS_OF_DATE = _DEMO_AS_OF_DATE
 
 # ── Canvas & London greyscale ──
-WHITE = "#ffffff"
+# The palette has no standalone white — the DS replaces London-100 with the warm
+# canvas, so #ffffff survives only as the dark-card text colour. That is what
+# every use here is: labels painted on a dark bar or a dark card.
+WHITE = LL_CARD_TEXT
 CANVAS = LL_CANVAS
 TEXT_PRIMARY = LL_TEXT
 TEXT_SECONDARY = LL_TEXT_SEC
