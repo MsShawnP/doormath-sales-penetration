@@ -285,6 +285,37 @@
     border-color: var(--ll-chicago-20) !important;
 }
 
+/* Plotly injects its own stylesheet setting the .plotly container to
+   "Open Sans", verdana, arial. SVG <text> inherits from that container, and
+   Plotly only writes font-family inline where it thinks the value differs from
+   the container's — so every sans element in every chart (bar value labels,
+   axis ticks, legend, annotations) rendered in Open Sans while layout.font
+   correctly reported Source Sans 3. Chart titles escaped it because the serif
+   family is written inline.
+
+   Override the container, not the text: an !important on text would also beat
+   the title's inline Playfair and turn chart titles sans. */
+.js-plotly-plot .plotly,
+.js-plotly-plot .plotly div {
+    font-family: var(--ll-sans) !important;
+}
+
+/* Radius — the DS allows exactly one, 2px. Dash ships its controls at 4px. */
+.dash-dropdown,
+.dash-dropdown-value-count,
+.dash-options-list,
+.dash-options-list-option {
+    border-radius: var(--ll-radius) !important;
+}
+
+/* Dash's internal focus-target input carries the UA default #767676 border,
+   which is not a palette colour. The element sits behind the dropdown button
+   and is clipped by .filter-group, so this is not a visible change — it just
+   keeps every declared border on a token. */
+.dash-dropdown-focus-target {
+    border-color: var(--ll-london-85) !important;
+}
+
 /* Dropdown focus/open outline */
 .dash-dropdown:focus,
 .dash-dropdown:focus-visible,
