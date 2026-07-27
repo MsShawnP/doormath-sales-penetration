@@ -8,6 +8,7 @@ startups skip the expensive raw-scan processing entirely.
 """
 
 import hashlib
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -18,11 +19,15 @@ from cinderhaven_store_universe import (
     get_stores,
 )
 from cinderhaven_store_universe.constants import (
+    AUTH_RATES,
     DEMO_AS_OF_DATE,
     LATE_LAUNCH,
     NEVER_SCAN_RATES,
     PRODUCT_LINES,
     RETAILERS,
+    SCAN_RATES,
+    SEED,
+    VOLUME_TIER_WEIGHTS,
 )
 
 _CACHE_DIR = Path(__file__).resolve().parent.parent / ".cache"
@@ -41,11 +46,28 @@ STORE_INFO["weight"] = STORE_INFO["volume_tier"].map({"A": 3, "B": 2, "C": 1})
 
 
 def _cache_key():
-    """Hash data shape + generation params to detect data changes."""
-    sig = (
-        f"{len(AUTH)}-{len(STORES)}-{DEMO_AS_OF_DATE}"
-        f"-{len(SLOW_LEAK)}-{len(NEVER_SCAN_RATES)}-{len(LATE_LAUNCH)}"
-        f"-{sorted(SLOW_LEAK.keys())}"
+    """Hash the generation inputs by value so any data change invalidates the cache.
+
+    The previous key hashed collection *lengths*.  Changing the seed, a scan or
+    authorization rate, a volume-tier weight, or a slow-leak curve leaves every
+    length identical, so the key did not move and the app silently reloaded
+    pre-aggregates built from data that no longer existed.
+    """
+    sig = json.dumps(
+        {
+            "seed": SEED,
+            "as_of": str(DEMO_AS_OF_DATE),
+            "auth_rates": AUTH_RATES,
+            "scan_rates": SCAN_RATES,
+            "never_scan_rates": NEVER_SCAN_RATES,
+            "late_launch": LATE_LAUNCH,
+            "volume_tier_weights": VOLUME_TIER_WEIGHTS,
+            "slow_leak": SLOW_LEAK,
+            "auth_rows": len(AUTH),
+            "store_rows": len(STORES),
+        },
+        sort_keys=True,
+        default=str,
     )
     return hashlib.md5(sig.encode()).hexdigest()[:12]
 
