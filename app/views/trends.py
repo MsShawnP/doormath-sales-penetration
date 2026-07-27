@@ -312,48 +312,6 @@ def _build_acv_chart(acv_data, quarters, selected_point=None):
     return fig
 
 
-def _dodge_overlapping(tdp_data, quarters, threshold=1.0, min_gap=1.0):
-    """Nudge overlapping TDP values apart at each quarter for visual clarity."""
-    nudged = {ret_id: dict(vals) for ret_id, vals in tdp_data.items()}
-
-    # Sort cluster members by mean value across all quarters so the same
-    # retailer always gets the same lane — prevents artificial line crossings.
-    means = {}
-    for ret_id in tdp_data:
-        vals = [tdp_data[ret_id].get(q, 0.0) for q in quarters]
-        means[ret_id] = sum(vals) / len(vals) if vals else 0.0
-
-    for q in quarters:
-        points = [(ret_id, tdp_data[ret_id].get(q, 0.0)) for ret_id in tdp_data]
-        points.sort(key=lambda p: p[1])
-
-        if len(points) < 2:
-            continue
-
-        clusters = []
-        current = [points[0]]
-        for i in range(1, len(points)):
-            if points[i][1] - current[-1][1] <= threshold:
-                current.append(points[i])
-            else:
-                if len(current) > 1:
-                    clusters.append(current)
-                current = [points[i]]
-        if len(current) > 1:
-            clusters.append(current)
-
-        for cluster in clusters:
-            cluster.sort(key=lambda p: means[p[0]])
-            center = sum(p[1] for p in cluster) / len(cluster)
-            n = len(cluster)
-            total_span = (n - 1) * min_gap
-            start = center - total_span / 2
-            for j, (ret_id, _) in enumerate(cluster):
-                nudged[ret_id][q] = round(start + j * min_gap, 2)
-
-    return nudged
-
-
 def _build_tdp_chart(tdp_data, quarters, selected_point=None):
     """Build TDP trend line chart with one line per retailer plus a median reference.
 
@@ -362,7 +320,6 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
     """
     fig = go.Figure()
 
-    nudged = _dodge_overlapping(tdp_data, quarters)
     all_values = []
 
     medians = []
@@ -394,8 +351,7 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
         symbol = RETAILER_MARKERS.get(ret_id, "circle")
         name = _RETAILER_NAMES.get(ret_id, ret_id)
         true_values = [tdp_data[ret_id].get(q, 0.0) for q in quarters]
-        plot_values = [nudged[ret_id].get(q, 0.0) for q in quarters]
-        all_values.extend(plot_values)
+        all_values.extend(true_values)
 
         opacity = 1.0
         if selected_point and selected_point.get("retailer_id") != ret_id:
@@ -404,7 +360,7 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
         fig.add_trace(
             go.Scatter(
                 x=quarters,
-                y=[round(v, 1) for v in plot_values],
+                y=[round(v, 1) for v in true_values],
                 mode="lines+markers+text",
                 name=name,
                 line=dict(color=color, width=2.5, dash=dash),
@@ -420,14 +376,12 @@ def _build_tdp_chart(tdp_data, quarters, selected_point=None):
 
     y_range = _auto_y_range(all_values)
 
-    # End-of-line labels using true (un-dodged) values
     endline = []
     for ret_id in sorted(tdp_data.keys()):
         true_final = tdp_data[ret_id].get(quarters[-1], 0.0)
-        plot_final = nudged[ret_id].get(quarters[-1], 0.0)
         endline.append(
             {
-                "y": plot_final,
+                "y": true_final,
                 "name": _RETAILER_NAMES.get(ret_id, ret_id),
                 "color": RETAILER_COLORS.get(ret_id, TEAL_SEQUENTIAL[0]),
                 "value_str": f"{true_final:.1f}",
