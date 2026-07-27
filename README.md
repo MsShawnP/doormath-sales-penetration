@@ -36,6 +36,7 @@ cd doormath-sales-penetration
 python -m venv .venv
 .venv\Scripts\activate        # Windows
 pip install -e packages/cinderhaven-store-universe
+pip install -e packages/lailara-palette
 pip install -e ".[dev]"
 python wsgi.py
 ```
