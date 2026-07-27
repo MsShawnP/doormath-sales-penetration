@@ -496,9 +496,10 @@ def layout():
                 **{"aria-label": "TDP trend by retailer over time"},
             ),
             chart_footnote(
-                "Source: Cinderhaven synthetic POS scan data. TDP sums ACV% across all "
-                "authorized items in the active filter, by quarter. Dashed line is the "
-                "cross-retailer median."
+                "Source: Cinderhaven synthetic POS scan data. TDP sums each item's "
+                "share of total addressable store weight, by quarter. Its base differs "
+                "from ACV% above, so the two do not add up to one another. Dashed line "
+                "is the cross-retailer median."
             ),
             term_disclosure("tdp", inline=True),
             html.Div(id="tr-callout-area"),

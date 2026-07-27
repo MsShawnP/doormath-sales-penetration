@@ -52,18 +52,24 @@ TERM_DEFINITIONS = {
     ),
     "acv": (
         "ACV% (tier-weighted distribution)",
-        "The share of addressable store weight accounted for by stores carrying "
-        "your item. Stores are weighted by volume tier (A = 3, B = 2, C = 1) as "
-        "a proxy for actual dollar volume. Being in 30% of the largest stores is "
-        "worth far more reach than 30% of small ones. Computed per item-retailer "
-        "pair, not aggregated across items — so ACV% for a product line is the "
-        "average of its item-level figures, not a single weighted sum.",
+        "Of the authorized item-store pairs, the share that is actually "
+        "scanning — weighted by store volume tier (A = 3, B = 2, C = 1) as a "
+        "proxy for dollar volume. Being in 30% of the largest stores is worth "
+        "far more reach than 30% of small ones. Every authorized pair "
+        "contributes its store's weight to the denominator, so a store with 50 "
+        "authorized items but only 30 scanning contributes 60% of its potential "
+        "weight. Read it as an execution rate against shelf space you already "
+        "won, not as market reach.",
     ),
     "tdp": (
         "TDP (Total Distribution Points)",
-        "The sum of ACV% across all your items in a category. It captures both "
-        "breadth (how many doors) and depth (how many of your items per door) in "
-        "a single number — a compact measure of total shelf presence.",
+        "Each item's share of total addressable store weight, summed across "
+        "your items. It captures both breadth (how many doors) and depth (how "
+        "many of your items per door) in a single number. Note the base differs "
+        "from ACV%: TDP divides by every addressable store counted once, while "
+        "ACV% divides by every authorized item-store pair. The two therefore do "
+        "not add up to one another — TDP measures reach across the market, "
+        "ACV% measures execution against authorizations.",
     ),
     "unweighted": (
         "Unweighted distribution",
