@@ -26,8 +26,7 @@ def _build_intro():
         [
             html.H1("Distribution Penetration Tracker", className="ll-section-title"),
             html.P(
-                "Which stores should carry your product but don't — "
-                "and where is that gap widening?"
+                "Which stores should carry your product but don't — and where is that gap widening?"
             ),
             glossary_block(),
         ],
@@ -86,7 +85,10 @@ def register_layout():
     app.layout = lailara_frame.wrap(
         inner_layout,
         tool_name="Door Math",
-        footer_note="Distribution penetration tracker for CPG brands. Data: Cinderhaven Provisions, a synthetic demonstration dataset (not a client).",
+        footer_note=(
+            "Distribution penetration tracker for CPG brands. Data: Cinderhaven "
+            "Provisions, a synthetic demonstration dataset (not a client)."
+        ),
         no_container=True,
     )
 
