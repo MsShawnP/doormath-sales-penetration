@@ -298,6 +298,11 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
             marker=dict(color=SCAN_BAR, opacity=scan_opacity),
             text=[fmt_number(v) for v in scan_counts],
             textposition="inside",
+            # Centre the label in its own segment.  Anchored to the segment end it
+            # overhangs the boundary by 1-3px and paints onto the gap bar, which
+            # reads as a clipped digit ("4,997" losing its 7).
+            insidetextanchor="middle",
+            constraintext="inside",
             textfont=dict(family=FONT_SANS, size=12, color=WHITE, weight="bold"),
             hoverinfo="skip",
         )
@@ -332,13 +337,17 @@ def _build_retailer_chart(bar_data, selected_retailer=None):
                 yanchor="middle",
             )
         else:
+            # xshift, not leading spaces: the anchored text box starts ~13px left
+            # of the bar end, so a padded string still puts the first digit on the
+            # gap bar ("315" reading as "815").
             fig.add_annotation(
                 x=total,
                 y=retailers[i],
-                text=f"  {label}",
+                text=label,
                 showarrow=False,
                 font=dict(family=FONT_SANS, size=12, color=TEXT_SECONDARY, weight="bold"),
                 xanchor="left",
+                xshift=18,
                 yanchor="middle",
             )
 
