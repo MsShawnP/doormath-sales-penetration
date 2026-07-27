@@ -10,8 +10,13 @@ dependencies = [
     "numpy>=1.24",
     "dash-ag-grid>=31.0",
     "gunicorn>=22.0",
-    "python-dotenv>=1.0",
+    # wsgi.py imports flask directly for the health-check endpoint. Dash pulls
+    # flask in today, but relying on a transitive dependency for a direct import
+    # means a future Dash release could break startup before health checks pass.
+    "flask>=3.0",
     "jinja2>=3.1",
+    # Local packages under packages/. Install them by path before this project;
+    # neither name resolves from a package index. See the README Quick start.
     "cinderhaven-store-universe",
     "lailara-palette",
     "pyarrow>=15.0",
