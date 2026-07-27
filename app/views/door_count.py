@@ -164,6 +164,7 @@ def _compute_retailer_gaps(auth, quarters):
         cards.append(
             {
                 "value": fmt_number(int(row["gap"])),
+                "gap_raw": int(row["gap"]),
                 "label": f"pairs not scanning — {row['retailer_name']}",
                 "is_worst": idx == worst_idx,
                 "gap_pct": row["gap_pct"],
@@ -197,9 +198,12 @@ def _gap_card(data):
     ]
 
     if data.get("is_worst"):
+        # Name the basis. The cards are ordered by absolute gap, so the badge
+        # lands on a small number sitting beside much larger ones — without
+        # "by rate" and the percentage it reads as a contradiction.
         children.append(
             html.Span(
-                "widest gap",
+                f"widest gap by rate — {data['gap_pct']:.0%}",
                 style={
                     "fontFamily": FONT_SANS,
                     "fontSize": "11px",
@@ -224,10 +228,36 @@ def _gap_card(data):
 
 
 def _gap_card_grid(cards_data):
-    """Render retailer gap cards in a 3-column CSS grid."""
+    """Render retailer gap cards in a 3-column CSS grid, under their total.
+
+    The six per-retailer numbers never added up anywhere on the page, so the
+    single figure that states the size of the problem — every authorized pair
+    producing nothing — was left for the reader to sum by hand.
+    """
+    total = sum(c["gap_raw"] for c in cards_data)
     return html.Div(
-        [_gap_card(c) for c in cards_data],
-        className="gap-card-grid",
+        [
+            html.P(
+                [
+                    html.Span(
+                        fmt_number(total),
+                        style={"fontWeight": "700", "color": INK},
+                    ),
+                    " authorized item-store pairs are not scanning across "
+                    f"{len(cards_data)} retailers.",
+                ],
+                style={
+                    "fontFamily": FONT_SANS,
+                    "fontSize": "17px",
+                    "color": TEXT_SECONDARY,
+                    "margin": "0 0 16px 0",
+                },
+            ),
+            html.Div(
+                [_gap_card(c) for c in cards_data],
+                className="gap-card-grid",
+            ),
+        ]
     )
 
 

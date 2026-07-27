@@ -24,7 +24,7 @@ def _build_intro():
     """Brief orientation for cold visitors above the tab bar."""
     return html.Div(
         [
-            html.H1("Distribution Penetration Tracker"),
+            html.H1("Distribution Penetration Tracker", className="ll-section-title"),
             html.P(
                 "Which stores should carry your product but don't — "
                 "and where is that gap widening?"

@@ -6,13 +6,14 @@
     margin-bottom: var(--ll-space-lg);
 }
 
+/* Sized by .ll-section-title from the frame (22px / 18px mobile). At the old
+   18px/16px the page's primary heading was barely larger than the 17px body
+   text around it, so the one element that tells a first-time reader what the
+   tool is read as a caption. Ink, not London-20 — DS reserves Ink for primary
+   headings. */
 .tool-intro h1 {
-    font-family: var(--ll-serif);
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--ll-london-20);
+    color: var(--ll-london-5);
     margin: 0 0 6px 0;
-    line-height: 1.3;
 }
 
 .tool-intro p {
@@ -223,9 +224,8 @@
 
 /* Mobile responsive */
 @media (max-width: 640px) {
-    .tool-intro h1 { font-size: 16px; }
-
-    /* .hero-number's 44px mobile step comes from .ll-headline-number. */
+    /* .tool-intro h1 and .hero-number take their mobile steps from the frame
+       classes .ll-section-title and .ll-headline-number. */
     .hero-subtext { font-size: 15px; }
     .hero-trend { font-size: 15px; }
 
