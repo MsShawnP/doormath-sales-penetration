@@ -89,6 +89,22 @@
   .trend-up { color: {{ colors.teal }}; }
   .trend-down { color: {{ colors.risk }}; }
   .trend-flat { color: {{ colors.text_secondary }}; }
+  /* Revenue at risk — deliberately secondary to the distribution metrics
+     above it, and never the hero number. Carries its own assumption inline
+     so the figure can never be read without the rate that produced it. */
+  .revenue-note {
+    font-size: 9.5pt;
+    line-height: 1.45;
+    color: {{ colors.text_secondary }};
+    margin-top: 4pt;
+    margin-bottom: 18pt;
+    padding-left: 8pt;
+    border-left: 1pt solid {{ colors.risk }};
+  }
+  .revenue-note strong {
+    color: {{ colors.ink }};
+    font-weight: 600;
+  }
 
   /* ── Section titles ── */
   .section-title {
@@ -213,6 +229,18 @@
     {% endfor %}
   </tbody>
 </table>
+
+<!-- Revenue at risk — secondary to the distribution metrics above, never the
+     hero. The assumption is printed inline so the figure cannot be quoted
+     without the rate that produced it. -->
+{% if revenue_at_risk and gap_pairs %}
+<div class="revenue-note">
+  <strong>&asymp;{{ revenue_at_risk }}/yr</strong> revenue at risk on
+  {{ "{:,}".format(gap_pairs) }} authorized pairs not scanning &mdash;
+  assumes ${{ "%g"|format(revenue_rate|float) }}/item/store/week.
+  Not measured; Cinderhaven carries no price or velocity data.
+</div>
+{% endif %}
 
 <!-- Top Exceptions -->
 <h2 class="section-title">Top Exceptions</h2>

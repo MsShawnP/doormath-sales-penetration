@@ -43,6 +43,7 @@ from app.constants import (
     fmt_pct,
 )
 from app.data import DEMO_AS_OF_DATE, PL_NAMES, RETAILER_NAMES
+from app.views.door_count import _fmt_usd_compact, _revenue_at_risk
 from app.views.exceptions import compute_exceptions
 
 _RET_NAMES = RETAILER_NAMES
@@ -242,6 +243,10 @@ def _compute_scorecard_data(filters):
 
     generation_date = DEMO_AS_OF_DATE.strftime("%Y-%m-%d")
 
+    # Gap in authorized item-store pairs, from the same rows the tables report,
+    # so the printed revenue figure cannot drift from the printed distribution.
+    gap_pairs = sum(r["addressable"] - r["carrying"] for r in retailer_rows)
+
     return {
         "hero_pct": hero_pct,
         "hero_delta": hero_delta,
@@ -250,6 +255,7 @@ def _compute_scorecard_data(filters):
         "top_exceptions": top_exceptions,
         "quarter_label": end_q,
         "generation_date": generation_date,
+        "gap_pairs": gap_pairs,
     }
 
 
@@ -707,15 +713,18 @@ def _update_scorecard(filter_json, active_tab):
     Output("sc-pdf-error", "children"),
     Input("sc-download-btn", "n_clicks"),
     State("filter-state", "data"),
+    State("revenue-rate", "data"),
     prevent_initial_call=True,
 )
-def _download_pdf(n_clicks, filter_json):
+def _download_pdf(n_clicks, filter_json, revenue_rate):
     """Generate and trigger PDF download."""
     if not n_clicks:
         return no_update, no_update
 
     filters = json.loads(filter_json) if filter_json else {}
     data = _compute_scorecard_data(filters)
+    data["revenue_rate"] = revenue_rate
+    data["revenue_at_risk"] = _fmt_usd_compact(_revenue_at_risk(data["gap_pairs"], revenue_rate))
 
     try:
         from app.pdf import generate_scorecard_pdf

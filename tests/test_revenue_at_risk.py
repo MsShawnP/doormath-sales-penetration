@@ -136,3 +136,77 @@ class TestAssumptionIsDisclosed:
         assert found, "rate input dc-rev-rate not found in the layout"
         assert found[0].value == DEFAULT_RATE_PER_ITEM_STORE_WEEK
         assert found[0].min == 0
+
+
+class TestRevenueInThePdf:
+    """The exported scorecard must carry the figure and its assumption together.
+
+    These assert on the rendered HTML rather than the PDF bytes: WeasyPrint
+    cannot run on Windows and there is no CI, so the real engine is exercised
+    only by the two tests that skip here. See HANDOFF Known-but-unfixed.
+    """
+
+    def _data(self, rate=15, **over):
+        from app.filters import DEFAULT_FILTER_STATE
+        from app.views.scorecard import _compute_scorecard_data
+
+        d = _compute_scorecard_data(dict(DEFAULT_FILTER_STATE))
+        d["revenue_rate"] = rate
+        d["revenue_at_risk"] = _fmt_usd_compact(_revenue_at_risk(d["gap_pairs"], rate))
+        d.update(over)
+        return d
+
+    def _html(self, data):
+        from app.pdf import render_scorecard_html
+
+        return render_scorecard_html(data)
+
+    def test_scorecard_gap_matches_the_door_count_gap(self):
+        """Both surfaces must report the same gap or the app contradicts itself."""
+        from app.filters import DEFAULT_FILTER_STATE
+
+        auth = _filter_auth_from_dict(dict(DEFAULT_FILTER_STATE))
+        door_count_gap = sum(c["gap_raw"] for c in _compute_retailer_gaps(auth, ["Q4 2025"]))
+        assert self._data()["gap_pairs"] == door_count_gap
+
+    def test_figure_and_assumption_appear_together(self):
+        html = self._html(self._data(rate=15))
+        assert "$2.5M/yr" in html
+        assert "$15/item/store/week" in html
+        assert "Not measured" in html
+
+    def test_the_rate_reaches_the_pdf(self):
+        assert "$40/item/store/week" in self._html(self._data(rate=40))
+        assert "$7.5/item/store/week" in self._html(self._data(rate=7.5))
+
+    def test_it_is_not_the_hero_number(self):
+        """It must sit below the distribution metrics, outside the hero block."""
+        html = self._html(self._data())
+        body = html[html.find("</style>") :]
+        hero = body[body.find('<div class="hero">') : body.find("Retailer Summary")]
+        assert "revenue-note" not in hero
+
+        i_tables = body.find("Product Line Summary")
+        i_note = body.find('class="revenue-note"')
+        i_exceptions = body.find("Top Exceptions")
+        assert i_tables < i_note < i_exceptions
+
+    def test_omitted_when_there_is_no_gap(self):
+        assert 'class="revenue-note"' not in self._html(
+            self._data(gap_pairs=0, revenue_at_risk="$0")
+        )
+
+    def test_omitted_when_no_rate_was_ever_set(self):
+        assert 'class="revenue-note"' not in self._html(
+            self._data(revenue_rate=None, revenue_at_risk=None)
+        )
+
+    def test_screen_scorecard_data_renders_without_the_revenue_keys(self):
+        """_compute_scorecard_data alone must still render — the keys are added
+        by the download callback, not the computation."""
+        from app.filters import DEFAULT_FILTER_STATE
+        from app.views.scorecard import _compute_scorecard_data
+
+        html = self._html(_compute_scorecard_data(dict(DEFAULT_FILTER_STATE)))
+        assert 'class="revenue-note"' not in html
+        assert "Distribution Scorecard" in html

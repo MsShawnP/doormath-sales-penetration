@@ -15,6 +15,7 @@ from app.filters import (
     register_filter_callbacks,
 )
 from app.views import door_count, exceptions, scorecard, trends
+from app.views.door_count import DEFAULT_RATE_PER_ITEM_STORE_WEEK
 
 TAB_LABELS = ["Door Count", "Trends", "Exceptions", "Scorecard"]
 TAB_IDS = ["door-count", "trends", "exceptions", "scorecard"]
@@ -68,6 +69,14 @@ def register_layout():
         [
             dcc.Store(
                 id="filter-state", storage_type="session", data=json.dumps(DEFAULT_FILTER_STATE)
+            ),
+            # The revenue-at-risk assumption. Lives here rather than on the Door
+            # Count tab because tab content is swapped, so the input is not
+            # mounted when the Scorecard builds its PDF.
+            dcc.Store(
+                id="revenue-rate",
+                storage_type="session",
+                data=DEFAULT_RATE_PER_ITEM_STORE_WEEK,
             ),
             html.Div(
                 [

@@ -87,8 +87,16 @@ class TestScorecardData:
             "top_exceptions",
             "quarter_label",
             "generation_date",
+            "gap_pairs",
         }
         assert set(data.keys()) == expected_keys
+
+    def test_gap_pairs_matches_the_retailer_rows(self):
+        """The printed revenue figure derives from the printed distribution."""
+        data = _get_scorecard_data()
+        expected = sum(r["addressable"] - r["carrying"] for r in data["retailer_rows"])
+        assert data["gap_pairs"] == expected
+        assert data["gap_pairs"] > 0
 
     def test_hero_metric_valid_percentage(self):
         """Hero metric is a valid percentage between 0 and 1."""

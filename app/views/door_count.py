@@ -603,6 +603,11 @@ def _revenue_at_risk_block():
                         min=0,
                         step=1,
                         debounce=True,
+                        # Tab content is swapped, so without persistence the
+                        # assumption would silently reset to the default every
+                        # time the reader navigates away and back.
+                        persistence=True,
+                        persistence_type="session",
                         className="assumption-input",
                     ),
                 ],
@@ -798,6 +803,16 @@ def _update_door_count_view(filter_json, active_tab):
         gap_children.append(_gap_card_grid(gap_cards))
 
     return hero_text, subtitle, trend_text, trend_style, retailer_fig, pl_fig, gap_children
+
+
+@callback(
+    Output("revenue-rate", "data"),
+    Input("dc-rev-rate", "value"),
+    prevent_initial_call=True,
+)
+def _publish_revenue_rate(rate):
+    """Mirror the assumption into the shared store for the Scorecard's PDF."""
+    return rate
 
 
 @callback(
