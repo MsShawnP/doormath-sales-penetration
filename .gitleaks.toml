@@ -5,3 +5,15 @@ useDefault = true
 id = "postgres-url-with-password"
 description = "Populated Postgres connection string"
 regex = '''postgres(?:ql)?://[^:@/\s]+:[^@/\s]+@'''
+
+  # .env.example exists to document the shape of a connection string. Its
+  # commented user:pass placeholder matched this rule, so a full-history scan
+  # exited "leaks found: 1" and the pre-commit hook would block any future
+  # commit touching the file — with no real credential anywhere in the tree.
+  #
+  # Scoped to this rule only, not a global allowlist: every default gitleaks
+  # rule still scans .env.example, so a real AWS key or token pasted there is
+  # still caught.
+  [rules.allowlist]
+  description = "Placeholder connection string in the env template"
+  paths = ['''(^|/)\.env\.example$''']
