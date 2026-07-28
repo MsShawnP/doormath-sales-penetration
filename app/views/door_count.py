@@ -148,6 +148,27 @@ def _compute_retailer_gaps(auth, quarters):
             .reset_index(name="carrying_pairs")
         )
 
+    # Per-store medians. A pair count is the store count multiplied by the items
+    # missing in each, so "999" reads as implausible on its own — the number a
+    # category manager can sanity-check is "6 of 40 items missing at a typical
+    # store". Median, not mean: the distribution has a tail.
+    per_store = (
+        auth_ret.groupby(["retailer_id", "store_id"])["sku_id"]
+        .nunique()
+        .groupby("retailer_id")
+        .median()
+    )
+    if sq.empty:
+        scanned_per_store = pd.Series(dtype=float)
+    else:
+        scanned_per_store = sq.groupby(["retailer_id", "store_id"])["sku_id"].nunique()
+
+    auth_per_store = auth_ret.groupby(["retailer_id", "store_id"])["sku_id"].nunique()
+    missing_per_store = (
+        auth_per_store.subtract(scanned_per_store, fill_value=0).groupby("retailer_id").median()
+    )
+    store_counts = auth_ret.groupby("retailer_id")["store_id"].nunique()
+
     merged = auth_pairs.merge(carry_pairs, on="retailer_id", how="left")
     merged["carrying_pairs"] = merged["carrying_pairs"].fillna(0).astype(int)
     merged["gap"] = merged["authorized_pairs"] - merged["carrying_pairs"]
@@ -161,11 +182,19 @@ def _compute_retailer_gaps(auth, quarters):
 
     cards = []
     for idx, row in merged.iterrows():
+        ret_id = row["retailer_id"]
+        typical_auth = int(per_store.get(ret_id, 0))
+        typical_missing = int(missing_per_store.get(ret_id, 0))
+        n_stores = int(store_counts.get(ret_id, 0))
         cards.append(
             {
                 "value": fmt_number(int(row["gap"])),
                 "gap_raw": int(row["gap"]),
                 "label": f"pairs not scanning — {row['retailer_name']}",
+                "context": (
+                    f"{typical_missing} of {typical_auth} items missing "
+                    f"at a typical store, across {n_stores} doors"
+                ),
                 "is_worst": idx == worst_idx,
                 "gap_pct": row["gap_pct"],
             }
@@ -196,6 +225,20 @@ def _gap_card(data):
             },
         ),
     ]
+
+    if data.get("context"):
+        children.append(
+            html.P(
+                data["context"],
+                style={
+                    "fontFamily": FONT_SANS,
+                    "fontSize": "12px",
+                    "color": TEXT_SECONDARY,
+                    "lineHeight": "1.4",
+                    "margin": "6px 0 0 0",
+                },
+            )
+        )
 
     if data.get("is_worst"):
         # Name the basis. The cards are ordered by absolute gap, so the badge
