@@ -51,25 +51,6 @@ def sku_to_product_line(sku_id):
     return _PL_NAMES.get(line_code, line_code)
 
 
-def _quarter_to_weeks(quarter_str):
-    """Convert 'Q1 2025' to a set of week strings like {'2025-W01', ..., '2025-W13'}.
-
-    Q1=W01-W13, Q2=W14-W26, Q3=W27-W39, Q4=W40-W52.
-    """
-    parts = quarter_str.split()
-    q = int(parts[0][1])
-    year = int(parts[1])
-    boundaries = {1: (1, 13), 2: (14, 26), 3: (27, 39), 4: (40, 52)}
-    start_w, end_w = boundaries[q]
-    return {f"{year}-W{w:02d}" for w in range(start_w, end_w + 1)}
-
-
-def _week_to_index(week_str):
-    """Convert 'YYYY-Wnn' to a sortable integer (year * 100 + week_num)."""
-    parts = week_str.split("-W")
-    return int(parts[0]) * 100 + int(parts[1])
-
-
 def _demo_as_of_week_index():
     """Return the week index for DEMO_AS_OF_DATE (2025-W52)."""
     iso = DEMO_AS_OF_DATE.isocalendar()

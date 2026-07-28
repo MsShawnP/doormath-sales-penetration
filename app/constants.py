@@ -25,14 +25,10 @@ from lailara_palette import (
     LL_HK_LIGHT,
     LL_HK_SURFACE,
     LL_INK,
-    LL_NY,
-    LL_NY_SURFACE,
     LL_RED,
     LL_REFERENCE,
     LL_SANS,
     LL_SEQ,
-    LL_SEQ_CHICAGO,
-    LL_SEQ_TOKYO,
     LL_SERIF,
     LL_SG,
     LL_SG_DARK,
@@ -95,11 +91,6 @@ TOKYO_40 = LL_TOKYO
 TOKYO_70 = LL_TOKYO_LIGHT
 TOKYO_95 = LL_TOKYO_SURFACE
 
-# ── New York (amber, reserve family) ──
-NY_35 = "#a88312"
-NY_55 = LL_NY
-NY_95 = LL_NY_SURFACE
-
 # ── Dark card tokens ──
 CARD_BG = LL_CARD_BG
 CARD_TEXT = LL_CARD_TEXT
@@ -121,21 +112,16 @@ INFO_TEXT = LL_STATUS["info"]["text"]
 # ── Semantic aliases for charts ──
 TREND_UP = HK_35
 TREND_DOWN = TOKYO_40
-AUTH_BAR = CHICAGO_20
 SCAN_BAR = HK_35
-# Gap bar: solid Chicago-20 navy — colorblind-safe against HK-35 teal
-# (navy vs teal distinguished by hue, not red/green).
-# Alternative: swap to GAP_BAR_ALT for single-hue teal sequential.
+# Gap bar: solid Chicago navy — colorblind-safe against the HK-35 teal scanning
+# bar, distinguished by hue rather than red/green.
 GAP_BAR = LL_CHICAGO
-GAP_BAR_ALT = LL_HK_DARK  # HK-20 #0c6552 — darkest teal, also safe
-GAP_TEXT = WHITE
 
 # ── Teal sequential palette (for charts) ──
 TEAL_SEQUENTIAL = list(LL_SEQ)
 
 # ── Categorical paired palette (design system slots 1-6) ──
 CATEGORICAL_6 = list(LL_CAT_10[:6])
-CATEGORICAL_6_TEXT = [WHITE, LL_SEQ_CHICAGO[0], WHITE, LL_SEQ[0], WHITE, LL_SEQ_TOKYO[1]]
 
 # ── Typography (for Plotly) ──
 FONT_SERIF = f"{LL_SERIF}, Georgia, Times New Roman, serif"
