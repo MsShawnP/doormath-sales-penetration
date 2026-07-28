@@ -22,6 +22,7 @@ from app.constants import (
     GAP_BAR,
     GRIDLINE,
     INK,
+    RED_42,
     SCAN_BAR,
     TEXT_SECONDARY,
     TREND_DOWN,
@@ -125,6 +126,39 @@ def _compute_product_line_bars(auth, quarters):
             result[pl_name] = {}
         result[pl_name][row["retailer_name"]] = int(row["scanning_pairs"])
     return result
+
+
+# Revenue-at-risk assumption.  The store universe carries no price or velocity
+# field and deliberately gains none — this is a user-supplied rate, surfaced and
+# editable on screen, never inferred from the data.
+DEFAULT_RATE_PER_ITEM_STORE_WEEK = 15.0
+WEEKS_PER_YEAR = 52
+
+
+def _revenue_at_risk(gap_pairs, rate_per_item_store_week):
+    """Annualized revenue attached to authorized pairs that are not scanning.
+
+    One gap pair is one item that a store is cleared to sell and is not selling,
+    so the rate is dollars per item, per store, per week.
+    """
+    if not gap_pairs or rate_per_item_store_week is None:
+        return 0.0
+    try:
+        rate = float(rate_per_item_store_week)
+    except (TypeError, ValueError):
+        return 0.0
+    if rate < 0:
+        return 0.0
+    return gap_pairs * rate * WEEKS_PER_YEAR
+
+
+def _fmt_usd_compact(value):
+    """Format dollars for a headline number: $2.5M, $840K, $950."""
+    if value >= 1_000_000:
+        return f"${value / 1_000_000:,.1f}M"
+    if value >= 1_000:
+        return f"${value / 1_000:,.0f}K"
+    return f"${value:,.0f}"
 
 
 def _compute_retailer_gaps(auth, quarters):
@@ -527,6 +561,76 @@ def _build_product_line_chart(pl_data):
 # ── Layout ──
 
 
+def _revenue_at_risk_block():
+    """Revenue-at-risk callout with its assumption exposed as an editable input.
+
+    Lives in the static layout rather than a callback output on purpose: a
+    dcc.Input rebuilt on every filter change loses focus mid-keystroke.  Only the
+    figure and the sentence beneath it are swapped by the callback.
+    """
+    return html.Div(
+        [
+            html.Div(
+                id="dc-revenue-figure",
+                className="ll-benchmark-value",
+                style={"color": INK},
+            ),
+            html.P(
+                "annualized revenue at risk on shelf space already won",
+                style={
+                    "fontFamily": FONT_SANS,
+                    "fontSize": "14px",
+                    "color": TEXT_SECONDARY,
+                    "margin": "6px 0 16px 0",
+                },
+            ),
+            html.Div(
+                [
+                    html.Label(
+                        "Assumption — $ per item, per store, per week:",
+                        htmlFor="dc-rev-rate",
+                        style={
+                            "fontFamily": FONT_SANS,
+                            "fontSize": "13px",
+                            "color": TEXT_SECONDARY,
+                            "marginRight": "8px",
+                        },
+                    ),
+                    dcc.Input(
+                        id="dc-rev-rate",
+                        type="number",
+                        value=DEFAULT_RATE_PER_ITEM_STORE_WEEK,
+                        min=0,
+                        step=1,
+                        debounce=True,
+                        className="assumption-input",
+                    ),
+                ],
+                style={"display": "flex", "alignItems": "center", "flexWrap": "wrap"},
+            ),
+            html.P(
+                "This figure is not measured. Cinderhaven carries no price or "
+                "velocity data, so the rate above is an assumption you set — "
+                "change it to your own and the number moves with it.",
+                style={
+                    "fontFamily": FONT_SANS,
+                    "fontSize": "12px",
+                    "fontStyle": "italic",
+                    "color": TEXT_SECONDARY,
+                    "lineHeight": "1.5",
+                    "maxWidth": "660px",
+                    "margin": "12px 0 0 0",
+                },
+            ),
+        ],
+        style={
+            "borderLeft": f"2px solid {RED_42}",
+            "padding": "20px 24px",
+            "marginTop": "32px",
+        },
+    )
+
+
 def layout():
     """Return the Door Count view component tree."""
     return html.Div(
@@ -585,6 +689,7 @@ def layout():
             term_disclosure("gap", inline=True),
             html.Div(id="dc-callout-area"),
             html.Div(id="dc-auth-gap-annotations"),
+            _revenue_at_risk_block(),
             html.Div(
                 dcc.Graph(
                     id="dc-product-line-chart",
@@ -693,6 +798,27 @@ def _update_door_count_view(filter_json, active_tab):
         gap_children.append(_gap_card_grid(gap_cards))
 
     return hero_text, subtitle, trend_text, trend_style, retailer_fig, pl_fig, gap_children
+
+
+@callback(
+    Output("dc-revenue-figure", "children"),
+    Input("filter-state", "data"),
+    Input("dc-rev-rate", "value"),
+    Input("main-tabs", "value"),
+)
+def _update_revenue_at_risk(filter_json, rate, active_tab):
+    """Recompute revenue at risk when the filters or the assumed rate change."""
+    if active_tab != "door-count":
+        return no_update
+
+    filters = json.loads(filter_json) if filter_json else {}
+    end_q = filters.get("end_quarter", "Q4 2025")
+    auth = _filter_auth_from_dict(filters)
+
+    gap_cards = _compute_retailer_gaps(auth, [end_q])
+    gap_pairs = sum(c["gap_raw"] for c in gap_cards)
+
+    return _fmt_usd_compact(_revenue_at_risk(gap_pairs, rate))
 
 
 @callback(

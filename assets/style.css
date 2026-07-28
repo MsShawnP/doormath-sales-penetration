@@ -301,11 +301,34 @@
     font-family: var(--ll-sans) !important;
 }
 
-/* Radius — the DS allows exactly one, 2px. Dash ships its controls at 4px. */
+/* Editable assumption input (revenue at risk). Sized to its content so the
+   figure reads as a value the reader owns, not a form field. */
+.assumption-input {
+    font-family: var(--ll-sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ll-london-5);
+    background-color: transparent;
+    border: 1px solid var(--ll-london-85);
+    border-radius: var(--ll-radius);
+    padding: 4px 8px;
+    width: 72px;
+}
+
+.assumption-input:focus,
+.assumption-input:focus-visible {
+    outline: 2px solid var(--ll-chicago-20);
+    outline-offset: 1px;
+    border-color: var(--ll-chicago-20);
+}
+
+/* Radius — the DS allows exactly one, 2px. Dash ships its controls at 4px,
+   including the stepper buttons it renders on a number input. */
 .dash-dropdown,
 .dash-dropdown-value-count,
 .dash-options-list,
-.dash-options-list-option {
+.dash-options-list-option,
+.dash-input-stepper {
     border-radius: var(--ll-radius) !important;
 }
 
