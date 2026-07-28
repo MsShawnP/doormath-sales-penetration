@@ -2,7 +2,66 @@
 
 ## Current phase
 
-Design-system compliance at 100%. All color tokens imported from `lailara_palette` package. Deployed and healthy.
+Review pass complete — audit, code review and UI review run, findings fixed
+across 23 commits on `main`. **Not deployed.** The live site is now well behind
+`main`; a deploy is the first thing the next session should do.
+
+### Session 16 — improve + code review + UI review (2026-07-27)
+
+**Started from:** live site 2 commits behind HEAD (Fly v18, Jul 14, built from
+`8d90972`). HANDOFF was itself 12 commits stale and made three false claims —
+wrong commit, "151 tests" when the suite ran 157, and "design-system compliance
+at 100%" that two hardcoded colours contradicted. All corrected below.
+
+**Ran:** a 7-reviewer audit workflow with adversarial verification (18 agents,
+61 raw findings, 58 surviving), the ui-review tool against both the live site and
+a local HEAD build, and a 30-second CEO/CFO comprehension read.
+
+**Fixed — numbers the tool was reporting wrong:**
+- Gap chart labels were painted over by the bars: Sprouts' 574 read as 674,
+  Costco's 95 as 05, Regional Group's 315 as 815, and 4,997 / 3,920 lost their
+  last digit. Two causes, both measured in rendered SVG geometry.
+- Scorecard/PDF "Top Exceptions" ranked by a value identical for all 50 SKUs, so
+  it printed the alphabetically-first ten. Now ranks by silent-store count and
+  matches the Exceptions tab — surfaces CHP-DG-003 and CHP-SC-007, the two
+  deliberate slow-leak SKUs.
+- The PDF hero caption named a different metric than its number ("addressable
+  doors carrying" is 100%, not 84.7%).
+- Scorecard invented 0.0% rows for filtered-out product lines, then named one as
+  worst-performing.
+- TDP ignored the item filter on both the scorecard and the Trends chart.
+- The TDP chart plotted nudged positions while labels and the median used real
+  values; position-dodge removed.
+- Pinned callout cards kept stale numbers after a filter change.
+- The parquet cache key could not detect any generator change.
+- Glossary and footnote claimed TDP sums ACV%; measured 21.77 vs 39.63.
+
+**Fixed — design system:**
+- The frame set no `body` font, so 14 visible elements rendered in Times New
+  Roman, and no `body` background, so the warm canvas did not cover the page.
+  Frame bumped to v1.3.0 — **the upstream frame kit still needs this change.**
+- All chart text rendered in Plotly's Open Sans (74 elements) despite the figure
+  spec being correct.
+- Vertical gridlines on both Door Count charts; Dash's 4px radius; off-palette
+  borders; the last four raw hex values.
+- Hero number migrated to the frame's `.ll-headline-number`.
+
+**Fixed — hygiene:** repo now passes `ruff check` and `ruff format`; a fresh
+clone installs (lailara-palette was never installed by the README); `flask`
+declared and unused `python-dotenv` dropped; dead constants and helpers removed;
+1.6 MB of screenshots untracked; `.dockerignore` added; gitleaks stops flagging
+its own env template.
+
+**Tests: 157 → 179.** Added batch-vs-reference parity coverage — proved the gap
+by injecting the suspected regression and watching all 130 pre-existing tests
+pass blind to it.
+
+**State:** `main` at 23 commits ahead of `origin/main`. 179 pass, 2 skip. Ruff
+clean. ui-review design checks all pass except one Plotly SVG false positive.
+
+**Deliberately not done:** the hero still leads with 84.7% rather than the
+deficit, and there is still no revenue figure anywhere — both are waiting on the
+revenue-number decision (see What's next).
 
 ### Session 15 — Design-system compliance (2026-07-02)
 
@@ -189,9 +248,39 @@ Design-system compliance at 100%. All color tokens imported from `lailara_palett
 
 ## What's next
 
-1. Run `/ce:compound` to extract learnings
-2. Verify `doormath.lailarallc.com` cert issued (`fly certs check doormath.lailarallc.com -a doormath-sales-penetration`)
-3. Add portfolio card to lailarallc.com `/work` page (in `lailara-website` repo, `engagements` array in `site/src/app/work/page.tsx`)
+1. **Deploy.** `main` is 23 commits ahead of the live site, and everything above
+   — the misread chart labels, the wrong PDF caption, the alphabetical Top
+   Exceptions — is still live for prospects until it ships.
+2. **Revenue framing, pending a decision.** The 30-second CEO/CFO read found the
+   hero leads with 84.7% (reads as good news) when the story is the 3,241 pairs
+   producing nothing, and that no dollar figure appears anywhere. The synthetic
+   data has no price or velocity field, so showing revenue at risk means either
+   adding one to the store universe — which triggers the data change protocol in
+   DECISIONS.md — or stating an explicit assumption in the UI. Awaiting a
+   decision from Claude Fable before either the hero reframing or the dollar
+   figure is built.
+3. **Re-vendor the frame upstream.** `lailara-frame.css` v1.3.0's base layer fixes
+   a defect every Lailara tool on v1.2.0 or earlier inherits (Times New Roman
+   fallback, missing canvas). The fix currently exists only in this repo's
+   vendored copy.
+4. Verify `doormath.lailarallc.com` cert issued (`fly certs check doormath.lailarallc.com -a doormath-sales-penetration`)
+5. Add portfolio card to lailarallc.com `/work` page (in `lailara-website` repo, `engagements` array in `site/src/app/work/page.tsx`)
+6. Run `/ce:compound` to extract learnings
+
+### Known-but-unfixed
+
+From the audit, deliberately deferred rather than missed:
+- PDF generation has never run under test on any machine — both real-engine
+  tests skip on Windows and there is no CI. Needs a `docker run … pytest` step.
+- No dependency lockfile and no upper bounds except WeasyPrint, so rebuilds are
+  not reproducible.
+- Flask's `MAX_CONTENT_LENGTH` is unset on a 1 GB VM.
+- One stuck PDF render disables PDF export until the container restarts.
+- The empty-state message and its Reset button are unreachable code.
+- Empty retailer filter means "show everything" on three tabs and "show nothing"
+  on Trends.
+- Several duplication clusters (`_gap_card` vs `stat_card`, the two scorecard
+  tables, the two chart-pin callbacks, the PDF context built twice).
 
 ## Key files
 

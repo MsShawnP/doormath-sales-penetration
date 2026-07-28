@@ -1,9 +1,70 @@
 # Door Math — Failures
 
+## 2026-07-27
+
+**Chart labels were "fixed" against the wrong overlap and shipped wrong numbers
+for six weeks.** Session 11 addressed gap-label collisions with
+`textposition="outside"` and `cliponaxis=False`. That stops Plotly clipping a
+label at the axis — it does nothing about the label being painted over by the
+bar. The outside label's text box starts ~13px left of the bar end, so the two
+leading spaces used as padding were not enough and the first digit landed on the
+navy segment. On the live site, Sprouts' 574 read as 674, Costco's 95 as 05, and
+Regional Group's 315 as 815. Meanwhile every inside label overhung its own bar by
+1–3px, clipping the last digit of 4,997 and 3,920. Lesson: a label-collision fix
+has to be verified by measuring rendered geometry, not by looking at the chart —
+the failure mode is a plausible-looking digit, not a visibly broken layout.
+
+**Plotly reported the right font and rendered the wrong one.** Every sans
+element in every chart — bar labels, axis ticks, legend, annotations, 74 painted
+elements — rendered in Open Sans while `layout.font.family` and
+`trace.textfont.family` both correctly held the Source Sans 3 stack and Plotly's
+`_fullLayout` confirmed it had accepted them. Plotly injects a stylesheet setting
+its container to Open Sans and only writes `font-family` onto text where it
+differs from what it assumes the container carries. Chart titles escaped because
+the serif family does get written inline, which made the whole thing look
+correct at a glance. Lesson: for Plotly, verify the computed style of rendered
+text; the Python-side figure spec can be right while the output is not.
+
+**A test named for the project's hardest rule tested none of the project's
+code.** `test_calculations_use_demo_as_of_date` asserted a constant inside the
+data package and imported nothing from `app/`. Adding `datetime.now()` anywhere
+in the app would have left it green while every silence figure shifted by ~30
+weeks. Replaced with a source scan plus an exact-value assertion.
+
+**Two tests went silent on exactly the regression they guarded.**
+`test_correct_columns` wrapped its only assertion in `if rows:`, and
+`test_all_exceptions_exceed_threshold` looped over the same list — so an empty
+exceptions result turned both into no-ops and shipped an empty grid and empty CSV
+with a green suite. Lesson: any test that iterates or conditions on a collection
+needs a prior assertion that the collection is non-empty.
+
+**Batch calculations had no parity guard, and the gap was invisible until
+proved.** The Trends and Scorecard tabs run on `batch_*` reimplementations of
+`calc_acv_pct` and `calc_tdp`, whose originals have no callers left in the app.
+Injecting the exact suspected regression — batch ACV correct in the first quarter,
+zero after — showed the pre-existing suite passing 130 tests completely blind to
+it. Lesson: when a fast path duplicates a reference implementation, assert they
+agree; and when claiming a coverage gap, inject the fault and watch the suite
+stay green rather than reasoning about it.
+
+**A fresh clone could never install.** `lailara-palette` is declared as a plain
+dependency name and does not exist on any index; the README installed only the
+other vendored package. pip treats an already-installed editable package as
+satisfying a requirement, which is why the store universe worked and this did
+not. Docker masked it entirely by installing both from local paths first. Lesson:
+a Dockerfile that works is not evidence that the documented developer setup does
+— test the README's own steps in a clean venv.
+
+**The docs and the code disagreed about a colour, in both directions.**
+DECISIONS.md and FAILURES.md both recorded the gap bar as London-70 grey chosen
+for colour-vision safety; the shipped code uses Chicago navy. Either a future
+session "restores" grey and silently reverts a deliberate change, or it burns
+time re-deriving why the chart does not match the docs. Corrected in both files.
+
 ## 2026-07-02
 
 **Tokyo-70 gap bar failed accessibility under red/green CVD.**
-Used Tokyo-70 (#e68a9a, rose/berry) for the authorization-vs-scanning gap bar, paired with HK-35 (teal) for the scanning segment. Looked great under normal vision — two distinct hues for two semantically different segments. But teal and rose collapse to the same muddy olive under deuteranopia/protanopia, making the gap invisible. Reverted to London-70 (neutral grey), which is universally distinguishable. Lesson: when two bar segments sit side by side, check the pair under simulated CVD before committing, not just individually.
+Used Tokyo-70 (#e68a9a, rose/berry) for the authorization-vs-scanning gap bar, paired with HK-35 (teal) for the scanning segment. Looked great under normal vision — two distinct hues for two semantically different segments. But teal and rose collapse to the same muddy olive under deuteranopia/protanopia, making the gap invisible. Reverted to a neutral grey, which is universally distinguishable. Lesson: when two bar segments sit side by side, check the pair under simulated CVD before committing, not just individually. (Superseded: the shipped colour is now Chicago navy `#1f2e7a`, which is CVD-safe against HK-35 teal by hue. See the 2026-07-27 correction.)
 
 **`economist_layout()` shallow merge silently dropped chart title fonts.**
 `defaults.update(overrides)` in `charts.py` replaced the entire `title` dict when a caller passed `title={"text": "My Chart"}`, losing the base font settings (`family`, `size`, `color`). Charts rendered with Plotly defaults (small, wrong font). Not caught until DOM-eval during the design-system compliance pass because the visual difference was subtle on some charts. Lesson: when a function merges a nested config dict, verify it's deep-merging, not shallow-replacing.

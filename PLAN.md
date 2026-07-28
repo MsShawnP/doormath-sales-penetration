@@ -1,7 +1,8 @@
 # Door Math — Plan
 
 **Tier:** Medium
-**Status:** Active — Prospect readiness done. Custom domain pending cert. Deploy + `/ce:compound` next.
+**Status:** Active — review pass complete (2026-07-27), 23 commits on `main` not
+yet deployed. Deploy first. Revenue framing blocked pending a decision.
 
 ## Implementation Units (from plan doc)
 
@@ -49,3 +50,31 @@
 - [x] Mobile responsive pass + manual checklist
 - [x] Accessibility pass + manual checklist
 - [x] README per Lailara template
+
+## Improvement History
+
+### 2026-07-27 — Improvement pass
+- **Trigger:** user-initiated (`/improve`, code review, UI review)
+- **What was reviewed:** all app code, calculations and metric definitions,
+  the design system against the live-rendered page, tests, dependencies,
+  workflow files, repo hygiene, and a 30-second CEO/CFO comprehension read.
+  7-reviewer audit workflow with adversarial verification — 61 raw findings,
+  58 surviving, 3 refuted.
+- **What was fixed:** 6 metric/reporting defects (gap-chart labels misreading as
+  wrong numbers, Top Exceptions ranked by a constant, PDF caption naming the
+  wrong metric, phantom 0.0% rows, TDP ignoring the item filter, TDP chart
+  plotting nudged values); stale pinned callouts; a cache key blind to every
+  generator change; the TDP/ACV% documentation mismatch; 7 design-system
+  violations (Times New Roman fallback, missing canvas, Plotly Open Sans in all
+  chart text, vertical gridlines, 4px radius, off-palette borders, raw hex);
+  3 framing gaps (page title sized below body text, gap cards never totalling,
+  an unexplained "widest gap" badge); and hygiene — ruff, a fresh clone that
+  could not install, dependency declarations, dead code, tracked screenshots,
+  .dockerignore, gitleaks. Tests 157 → 179, including batch-vs-reference parity
+  proved by fault injection.
+- **Deferred:** revenue framing and the hero reframing (blocked on a decision
+  about whether the store universe gains a price field); PDF-under-test via CI;
+  dependency lockfile; MAX_CONTENT_LENGTH; PDF executor saturation; unreachable
+  empty state; empty-filter semantics differing on Trends; duplication clusters.
+  All listed under "Known-but-unfixed" in HANDOFF.md.
+- **Next review:** 2026-08-24

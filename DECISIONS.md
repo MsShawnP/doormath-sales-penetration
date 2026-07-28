@@ -1,12 +1,91 @@
 # Door Math — Decisions
 
+## 2026-07-27 — Review pass (improve + code review + UI review)
+
+**TDP and ACV% keep their different bases; the documentation was wrong.**
+The glossary and the TDP chart footnote both claimed "TDP is the sum of ACV%
+across all your items". Measured at Walmart Q4 2025: TDP 21.77, sum of the app's
+per-SKU ACV% 39.63. `calc_tdp` divides by the weight of every addressable store
+counted once; `calc_acv_pct` divides by the weight of every authorized pair, so a
+store counts once per authorized item. `calc_tdp` is the standard Total
+Distribution Points definition, and the pair-level ACV% base is a deliberate
+choice from Session 9. Both are right on their own terms, so the fix was to
+restate the docs, not to change a metric. Both entries now say explicitly that
+the two do not sum to one another.
+
+**Top Exceptions ranks by silent-store count, not max weeks silent.**
+Every SKU has at least one pair that never scanned, and never-scanned pairs get
+the 104-week sentinel, so `max(weeks_silent)` was 104 for all 50 SKUs — the sort
+was a no-op and `.head(10)` returned the alphabetically-first ten SKU codes.
+Ranking by silent-store count matches the Exceptions tab's own grouping, so the
+three surfaces now agree. Kept the 104 sentinel: the data window is ~104 weeks,
+so "silent for the whole window" is a defensible reading. It just cannot be a
+ranking key.
+
+**The TDP chart plots real values; position-dodge removed entirely.**
+The dodge nudged plotted y up to 1.5 points off while labels, hover text and the
+median line used true values, so a retailer below the median could be drawn above
+it. Deliberately did not take the alternative fix of re-sorting lanes by the drawn
+quarter — FAILURES.md records that exact approach was tried and reverted for
+producing artificial line crossings. Plotting the truth makes lane assignment
+moot. Retailers stay distinguishable via the unique colour, dash and marker each
+already has from Session 10.
+
+**Chart typography is fixed by overriding Plotly's container, not its text.**
+Plotly injects a stylesheet setting `.plotly` to Open Sans, and SVG `<text>`
+inherits it. An `!important` on `text` would work but would also beat the chart
+title's inline Playfair and turn every title sans. Overriding the container lets
+inline styles keep winning where Plotly does set them.
+
+**The frame gains a base layer; upstream must be re-vendored.**
+`lailara-frame.css` styled `.lailara-page` but never `body`, so unstyled text fell
+back to Times New Roman and the warm canvas did not cover the page. This is a
+frame defect, not a Door Math one — every Lailara tool vendoring v1.2.0 or
+earlier has it. Bumped to v1.3.0 here; the upstream frame kit still needs the
+same change. Set no `font-size` at the frame level: tools size their own text and
+imposing the 17px body step would reflow every consumer.
+
+**The gap bar is Chicago navy (#1f2e7a), not London-70 grey.**
+Correcting the record. The 2026-07-02 entry below says the gap bar reverted to
+London-70 grey for colour-vision safety, and FAILURES.md said the same, but the
+shipped code uses `LL_CHICAGO` navy against HK-35 teal — distinguished by hue
+rather than red/green, so still CVD-safe. The docs described a state the code left
+behind.
+
+**Filter changes clear chart pins rather than recomputing the callout.**
+The callout callback reads `filter-state` as State, which does not trigger, so
+pinned cards kept showing the previous selection's numbers. Clearing the pin keeps
+the existing callback graph intact — the pin store stays the single trigger for
+the callout, and the chart figure keeps one owner per interaction. Matches what
+the plan document already specified.
+
+**The cache key hashes generation inputs by value.**
+Hashing collection lengths could not see a changed seed, scan rate, auth rate,
+volume-tier weight or slow-leak curve — all of which leave every length identical
+— so the app silently served pre-aggregates built from data that no longer
+existed. No generator logic was touched, only how the app fingerprints it.
+
+**The hero number's 10px line-box overflow is left as-is.**
+`ui-review` reports it, but no ancestor clips it and the glyphs paint complete —
+verified against the rendered page. Growing the frame's line-height would shift
+vertical rhythm for every tool vendoring it to fix a box-model report with no
+visible symptom.
+
+**Screenshots are untracked; gitleaks allowlisting is per-rule.**
+`screenshots/` is regenerable ui-review output that nothing links to, so it is
+gitignored rather than versioned. The gitleaks allowlist for `.env.example` is
+scoped to the postgres rule alone, not global, so every default rule still scans
+that file — a real key pasted there is still caught.
+
 ## 2026-07-02 — Design-system compliance
 
 **All hex values sourced from `lailara_palette` package, not hardcoded.**
 Vendored `lailara-palette` (v2.1.0) into `packages/lailara-palette/`. Replaced all ~40 hardcoded hex values in `app/constants.py` with imports. Semantic aliases (`ACCENT`, `DELTA_POS`, `GAP_BAR`, etc.) still exist but now reference palette tokens, not raw strings. Single source of truth for the entire Cinderhaven suite.
 
-**Gap bar stays London-70 (DISABLED), not Tokyo-70.**
-Tried Tokyo-70 (#e68a9a, rose/berry) for the authorization gap bar — visually distinct from HK teal, reads as "mild negative." Reverted because the gap chart uses HK-35 (teal) for scanning bars alongside the gap bars, and teal-vs-rose is unreadable under red/green color-vision deficiency (deuteranopia/protanopia). London-70 (grey) is universally distinguishable from teal. Accessibility trumps semantic color.
+**Gap bar is not Tokyo-70.** *(Superseded — see the 2026-07-27 correction above.
+The shipped colour is Chicago navy `#1f2e7a`, not the London-70 grey this entry
+originally recorded.)*
+Tried Tokyo-70 (#e68a9a, rose/berry) for the authorization gap bar — visually distinct from HK teal, reads as "mild negative." Reverted because the gap chart uses HK-35 (teal) for scanning bars alongside the gap bars, and teal-vs-rose is unreadable under red/green color-vision deficiency (deuteranopia/protanopia). Accessibility trumps semantic color.
 
 **`economist_layout()` uses one-level deep merge, not shallow `dict.update()`.**
 `defaults.update(overrides)` shallow-replaced dict keys like `title.font`, losing the base chart-title font settings (family, size, color) whenever an override only set `title.text`. Fixed with a one-level deep merge that preserves nested dict values not explicitly overridden.
