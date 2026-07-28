@@ -33,6 +33,9 @@ desktop.ini
 # Pre-aggregated data cache
 .cache/
 
+# UI-review output — regenerated on every run, nothing in the repo links to it
+screenshots/
+
 # Data artifacts
 *.csv
 *.xlsx

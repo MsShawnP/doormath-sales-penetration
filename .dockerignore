@@ -1,0 +1,44 @@
+# Keep local build leftovers out of the image and out of the build context.
+#
+# The Dockerfile COPYs packages/ wholesale, which sweeps in a locally-generated
+# build/ tree and egg-info metadata. setuptools consults build/lib/ when deciding
+# what is current, so a stale copy that has drifted from src/ could be baked into
+# the image instead of the real source.
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Pre-aggregated parquet cache — rebuilt on first boot
+.cache/
+
+# Version control and tooling
+.git/
+.gitignore
+.gitattributes
+.pre-commit-config.yaml
+.gitleaks.toml
+.claude/
+
+# Local-only files
+.env
+.env.*
+bridge.db
+screenshots/
+review.yaml
+
+# Not needed at runtime
+tests/
+docs/
+
+# No blanket *.md rule: packages/lailara-palette/pyproject.toml declares
+# readme = "README.md", and excluding it would break that package's build.
