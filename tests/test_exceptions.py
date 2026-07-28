@@ -105,20 +105,24 @@ class TestComputeExceptions:
             "end_quarter": "Q4 2025",
         }
         rows, _ = compute_exceptions(filters)
-        if rows:
-            expected_cols = {
-                "sku_id",
-                "item_name",
-                "product_line",
-                "retailer_name",
-                "store_id",
-                "region",
-                "authorized_date",
-                "last_scan_date",
-                "weeks_silent",
-                "volume_tier",
-            }
-            assert set(rows[0].keys()) == expected_cols
+        # Assert rows exist before checking their shape.  Wrapped in `if rows:`
+        # this went silent on exactly the regression it guards against: an empty
+        # exceptions list shipped an empty grid and an empty CSV with the whole
+        # suite still green.
+        assert rows, "expected exceptions for RET-REGIONAL / DG in Q1-Q4 2025"
+        expected_cols = {
+            "sku_id",
+            "item_name",
+            "product_line",
+            "retailer_name",
+            "store_id",
+            "region",
+            "authorized_date",
+            "last_scan_date",
+            "weeks_silent",
+            "volume_tier",
+        }
+        assert set(rows[0].keys()) == expected_cols
 
     def test_all_exceptions_exceed_threshold(self):
         """Every exception row should have weeks_silent > SILENCE_THRESHOLD_WEEKS."""
@@ -130,6 +134,8 @@ class TestComputeExceptions:
             "end_quarter": "Q4 2025",
         }
         rows, _ = compute_exceptions(filters)
+        # Without this the loop below passes vacuously on an empty list.
+        assert rows, "expected exceptions across all retailers in Q1-Q4 2025"
         for row in rows:
             assert row["weeks_silent"] > SILENCE_THRESHOLD_WEEKS, (
                 f"Row {row['sku_id']}@{row['store_id']} has weeks_silent="

@@ -191,3 +191,39 @@ def test_calculations_use_demo_as_of_date():
     from cinderhaven_store_universe.constants import DEMO_AS_OF_DATE as canonical_date
 
     assert canonical_date == pd.Timestamp("2025-12-29")
+
+
+def test_no_wall_clock_time_in_app_source():
+    """No app module may read the wall clock for a time-relative computation.
+
+    The synthetic data ends in 2025 while the real clock is past it, so any
+    datetime.now()/date.today() silently shifts every silence figure. The test
+    above only re-checks a constant inside the data package — it imports nothing
+    from app/, so the rule it is named for could be broken without it failing.
+    """
+    import pathlib
+    import re
+
+    app_dir = pathlib.Path(__file__).resolve().parent.parent / "app"
+    banned = re.compile(r"\b(?:datetime\.now|date\.today|Timestamp\.now|time\.time)\s*\(")
+
+    offenders = []
+    for path in sorted(app_dir.rglob("*.py")):
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if line.lstrip().startswith("#"):
+                continue
+            if banned.search(line):
+                offenders.append(f"{path.relative_to(app_dir.parent)}:{lineno}: {line.strip()}")
+
+    assert not offenders, "wall-clock time in app source; use DEMO_AS_OF_DATE:\n" + "\n".join(
+        offenders
+    )
+
+
+def test_scorecard_generation_date_is_pinned():
+    """The scorecard stamps the demo date, not today's date."""
+    from app.filters import DEFAULT_FILTER_STATE
+    from app.views.scorecard import _compute_scorecard_data
+
+    data = _compute_scorecard_data(dict(DEFAULT_FILTER_STATE))
+    assert data["generation_date"] == "2025-12-29"
