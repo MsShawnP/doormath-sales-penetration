@@ -90,6 +90,68 @@ class TestFontWiring:
         assert source.count("**_template_context(data)") == 2
 
 
+class TestFontFilesAreTheWeightTheyClaim:
+    """Guard against shipping a font file whose outlines are the wrong weight.
+
+    This has bitten twice. c60a37b found the bold face was a byte-copy of the
+    regular. Then source-sans-3-latin.woff2 and -latin-ext.woff2 turned out to
+    be ExtraLight (usWeightClass 200) while declared font-weight: 400 — so all
+    body text, in the PDF and on screen and on every site using this frame,
+    rendered a weight too light. Nothing declared it; both files looked fine by
+    name.
+
+    Runs everywhere: needs fontTools, not WeasyPrint.
+    """
+
+    @staticmethod
+    def _face(relpath):
+        from fontTools.ttLib import TTFont
+
+        return TTFont(ASSETS / relpath, fontNumber=0)
+
+    @pytest.mark.parametrize("_family,weight,relpath", EXPECTED_FACES)
+    def test_file_weight_matches_the_declaration(self, _family, weight, relpath):
+        actual = self._face(relpath)["OS/2"].usWeightClass
+        assert actual == int(weight), (
+            f"{relpath} declares font-weight {weight} but its usWeightClass is "
+            f"{actual} — the outlines are the wrong weight"
+        )
+
+    def test_weights_within_a_family_are_distinct_files(self):
+        """A heavier face that is a copy of the lighter one renders identically."""
+        import hashlib
+
+        outlines = {}
+        for _family, weight, relpath in EXPECTED_FACES:
+            font = self._face(relpath)
+            tag = "glyf" if "glyf" in font else "CFF "
+            digest = hashlib.sha1(font.reader[tag]).hexdigest()
+            outlines.setdefault(digest, []).append(f"{relpath} ({weight})")
+
+        dupes = {d: files for d, files in outlines.items() if len(files) > 1}
+        assert not dupes, f"font files share identical outlines: {list(dupes.values())}"
+
+    def test_heavier_weights_are_actually_wider(self):
+        """Cheap sanity check that the cuts differ in the right direction."""
+
+        def adv_h(relpath):
+            font = self._face(relpath)
+            glyph = font.getBestCmap().get(ord("H"))
+            return font["hmtx"][glyph][0] if glyph else None
+
+        sans_400 = adv_h("fonts/source-sans-3-latin.woff2")
+        sans_600 = adv_h("fonts/source-sans-3-latin-600.woff2")
+        serif_400 = adv_h("fonts/playfair-display-latin.woff2")
+        serif_700 = adv_h("fonts/playfair-display-latin-700.woff2")
+
+        assert sans_400 < sans_600, (
+            f"Source Sans 400 ({sans_400}) not lighter than 600 ({sans_600})"
+        )
+        assert serif_400 < serif_700, (
+            f"Playfair 400 ({serif_400}) not lighter than 700 ({serif_700})"
+        )
+
+
 class TestFooterSeparator:
     def test_footer_does_not_use_a_bare_hex_escape(self):
         """A CSS hex escape swallows the space that terminates it.

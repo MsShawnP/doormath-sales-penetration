@@ -25,7 +25,7 @@ dependencies = [
 [project.optional-dependencies]
 # pypdf parses the produced PDF in tests/test_pdf_fonts.py. Grepping the raw
 # bytes does not work — WeasyPrint writes objects into compressed /ObjStm.
-dev = ["pytest>=8.0", "ruff>=0.4", "pypdf>=4.0"]
+dev = ["pytest>=8.0", "ruff>=0.4", "pypdf>=4.0", "fonttools>=4.40"]
 pdf = ["weasyprint>=68.0,<69.0"]
 
 [tool.setuptools.packages.find]
