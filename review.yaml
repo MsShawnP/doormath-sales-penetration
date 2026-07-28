@@ -40,3 +40,7 @@ layout:
   - route: /
     assertions:
       - type: no_horizontal_scroll
+
+# Deployed to a lailarallc.com subdomain — audit live-rendered brand tokens.
+design_system:
+  max_reported: 20
