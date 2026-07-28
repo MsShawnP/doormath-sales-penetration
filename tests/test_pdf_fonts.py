@@ -120,9 +120,17 @@ class TestExceptionIdColumn:
     reason="WeasyPrint requires Linux system libraries (GTK, Pango, etc.)",
 )
 class TestRenderedPdfEmbedsBrandFonts:
-    """pdffonts-style check: read the font names out of the produced PDF."""
+    """pdffonts-style check on the produced PDF.
 
-    def _pdf_bytes(self):
+    Must parse the PDF, not grep it: WeasyPrint writes objects into compressed
+    /ObjStm streams, so /BaseFont appears zero times in the raw bytes. An earlier
+    version of these tests regexed the bytes, which made the positive assertion
+    fail unconditionally and the negative one pass vacuously against an empty
+    string — it would have certified a PDF with no brand fonts at all.
+    """
+
+    @staticmethod
+    def _pdf_bytes():
         pytest.importorskip("weasyprint")
         from app.filters import DEFAULT_FILTER_STATE
         from app.pdf import generate_scorecard_pdf
@@ -134,18 +142,93 @@ class TestRenderedPdfEmbedsBrandFonts:
         data["revenue_at_risk"] = _fmt_usd_compact(_revenue_at_risk(data["gap_pairs"], 15))
         return generate_scorecard_pdf(data)
 
+    @staticmethod
+    def _fonts(pdf_bytes):
+        """{BaseFont name: glyph count} for every font the PDF actually uses."""
+        import io
+
+        pypdf = pytest.importorskip("pypdf")
+
+        out = {}
+        reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+        for page in reader.pages:
+            res = page.get("/Resources")
+            if not res:
+                continue
+            fonts = res.get_object().get("/Font")
+            if not fonts:
+                continue
+            for ref in fonts.get_object().values():
+                font = ref.get_object()
+                for f in [font, *(k.get_object() for k in font.get("/DescendantFonts") or [])]:
+                    base = f.get("/BaseFont")
+                    if not base:
+                        continue
+                    name = str(base).lstrip("/")
+                    # max, not setdefault: a Type0 parent carries the same
+                    # /BaseFont as its descendant but none of the glyph data, and
+                    # it is visited first — setdefault would pin every count to 0.
+                    out[name] = max(out.get(name, 0), _glyph_count(f))
+        return out
+
     def test_embeds_playfair_and_source_sans(self):
-        pdf = self._pdf_bytes()
-        names = b"".join(re.findall(rb"/BaseFont\s*/([^\s/>\]]+)", pdf))
-        assert b"Playfair" in names, f"Playfair Display not embedded; fonts were: {names!r}"
-        assert b"SourceSans" in names or b"Source" in names, (
-            f"Source Sans 3 not embedded; fonts were: {names!r}"
+        fonts = self._fonts(self._pdf_bytes())
+        assert fonts, "no fonts found — the PDF parse failed, not the fix"
+        assert any("Playfair" in n for n in fonts), f"Playfair Display missing; got {list(fonts)}"
+        assert any("Source" in n for n in fonts), f"Source Sans 3 missing; got {list(fonts)}"
+
+    def test_body_and_heading_type_are_brand_fonts(self):
+        """The brand faces must carry the bulk of the text, not a handful of glyphs."""
+        fonts = self._fonts(self._pdf_bytes())
+        brand = {n: c for n, c in fonts.items() if "Playfair" in n or "Source" in n}
+        assert brand, f"no brand fonts embedded; got {fonts}"
+        assert max(brand.values()) > 30, (
+            f"brand fonts carry too few glyphs to be doing the body text: {brand}"
         )
 
-    def test_does_not_fall_back_to_system_fonts(self):
-        pdf = self._pdf_bytes()
-        names = b"".join(re.findall(rb"/BaseFont\s*/([^\s/>\]]+)", pdf))
-        for fallback in (b"DejaVu", b"Liberation", b"Nimbus"):
-            assert fallback not in names, (
-                f"{fallback.decode()} embedded — brand fonts did not resolve. Fonts: {names!r}"
+    def test_no_wholesale_fallback_to_system_fonts(self):
+        """Liberation Sans is allowed for the few glyphs the subsets lack.
+
+        The PDF uses Δ, ≈ and → , none of which fall in the unicode-ranges the
+        brand woff2 subsets declare, so Pango substitutes for those glyphs alone.
+        That is correct behaviour. What must never happen is a system font
+        picking up the body text because a font-family was invalid or a woff2
+        failed to resolve.
+        """
+        fonts = self._fonts(self._pdf_bytes())
+
+        for banned in ("DejaVu", "Nimbus", "FreeSerif", "Liberation-Serif", "Liberation-Mono"):
+            offenders = [n for n in fonts if banned.replace("-", "") in n.replace("-", "")]
+            assert not offenders, f"{banned} embedded — brand type did not resolve: {offenders}"
+
+        substitutes = {n: c for n, c in fonts.items() if "Liberation" in n}
+        for name, count in substitutes.items():
+            assert count < 10, (
+                f"{name} carries {count} glyphs — that is body text, not symbol "
+                f"substitution. All fonts: {fonts}"
             )
+
+
+def _glyph_count(font_obj):
+    """How many distinct characters this font actually renders in the document.
+
+    Reads the width arrays, which list only the CIDs present in the subset. Not
+    the embedded font programme: fontTools' getGlyphOrder() reports maxp
+    numGlyphs, which a subset preserves, so every font came back as its full
+    original glyph count (~2100) regardless of how little it was used.
+    """
+    w = font_obj.get("/W")
+    if w is not None:
+        # /W is [cid [w w w] cidFirst cidLast w ...]; count the individual widths.
+        total = 0
+        for entry in w.get_object():
+            obj = entry.get_object() if hasattr(entry, "get_object") else entry
+            if isinstance(obj, list):
+                total += len(obj)
+        if total:
+            return total
+
+    widths = font_obj.get("/Widths")
+    if widths is not None:
+        return len(widths.get_object())
+    return 0

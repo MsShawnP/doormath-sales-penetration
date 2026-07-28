@@ -84,7 +84,7 @@
 
   @page {
     size: letter portrait;
-    margin: 0.6in;
+    margin: 0.5in;
     @bottom-left {
       /* Literal em dash, not \2014 — a CSS hex escape is terminated by the
          following space, which consumed it and rendered "Provisions —Distribution".
@@ -109,7 +109,7 @@
   }
 
   body {
-    font-family: {{ fonts.sans }}, 'Liberation Sans', sans-serif;
+    font-family: 'Source Sans 3', 'Source Sans Pro', 'Liberation Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 10pt;
     color: {{ colors.text_primary }};
     background: {{ colors.white }};
@@ -119,12 +119,12 @@
   /* ── Header ── */
   .header {
     text-align: center;
-    margin-bottom: 18pt;
+    margin-bottom: 10pt;
     border-bottom: 2px solid {{ colors.ink }};
-    padding-bottom: 10pt;
+    padding-bottom: 6pt;
   }
   .header h1 {
-    font-family: {{ fonts.serif }}, 'Liberation Serif', Georgia, serif;
+    font-family: 'Playfair Display', 'Liberation Serif', Georgia, 'Times New Roman', serif;
     font-size: 20pt;
     font-weight: 700;
     color: {{ colors.ink }};
@@ -132,7 +132,7 @@
     letter-spacing: -0.01em;
   }
   .header .subtitle {
-    font-family: {{ fonts.sans }}, 'Liberation Sans', sans-serif;
+    font-family: 'Source Sans 3', 'Source Sans Pro', 'Liberation Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 11pt;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -147,11 +147,11 @@
   /* ── Hero block ── */
   .hero {
     text-align: center;
-    margin-bottom: 18pt;
+    margin-bottom: 8pt;
   }
   .hero-pct {
-    font-family: {{ fonts.serif }}, 'Liberation Serif', Georgia, serif;
-    font-size: 48pt;
+    font-family: 'Playfair Display', 'Liberation Serif', Georgia, 'Times New Roman', serif;
+    font-size: 34pt;
     font-weight: 700;
     color: {{ colors.ink }};
     letter-spacing: -0.02em;
@@ -178,7 +178,7 @@
     line-height: 1.45;
     color: {{ colors.text_secondary }};
     margin-top: 4pt;
-    margin-bottom: 18pt;
+    margin-bottom: 8pt;
     padding-left: 8pt;
     border-left: 1pt solid {{ colors.risk }};
   }
@@ -189,12 +189,12 @@
 
   /* ── Section titles ── */
   .section-title {
-    font-family: {{ fonts.serif }}, 'Liberation Serif', Georgia, serif;
+    font-family: 'Playfair Display', 'Liberation Serif', Georgia, 'Times New Roman', serif;
     font-size: 13pt;
     font-weight: 700;
     color: {{ colors.ink }};
-    margin-bottom: 6pt;
-    margin-top: 14pt;
+    margin-bottom: 5pt;
+    margin-top: 8pt;
   }
 
   /* ── Tables ── */
@@ -202,11 +202,11 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 9pt;
-    margin-bottom: 12pt;
+    margin-bottom: 6pt;
   }
   th {
     text-align: left;
-    padding: 4pt 6pt;
+    padding: 3pt 6pt;
     border-bottom: 1.5pt solid {{ colors.ink }};
     font-weight: 600;
     color: {{ colors.ink }};
@@ -215,7 +215,7 @@
   }
   th.right { text-align: right; }
   td {
-    padding: 3pt 6pt;
+    padding: 2pt 6pt;
     border-bottom: 0.5pt solid {{ colors.gridline }};
     color: {{ colors.text_primary }};
   }
@@ -362,7 +362,7 @@
 <p style="font-size: 9pt; color: {{ colors.text_secondary }};">No exceptions for the current filters.</p>
 {% endif %}
 
-<p style="font-size: 8pt; color: {{ colors.text_secondary }}; margin-top: 16px;">Data: Cinderhaven Provisions, a synthetic demonstration dataset &mdash; not a real company or client. Methodology and format are real.</p>
+<p style="font-size: 8pt; color: {{ colors.text_secondary }}; margin-top: 6pt;">Data: Cinderhaven Provisions, a synthetic demonstration dataset &mdash; not a real company or client. Methodology and format are real.</p>
 
 </body>
 </html>
