@@ -4,11 +4,92 @@
 <meta charset="utf-8">
 <title>Distribution Scorecard &mdash; {{ quarter_label }}</title>
 <style>
+  /* ── Self-hosted brand fonts ──────────────────────────────────────────────
+     Paths are relative to assets/, which app.pdf passes to WeasyPrint as
+     base_url.  Without these the PDF renders in whatever the system supplies —
+     DejaVu Serif and Liberation Sans — and carries none of the brand type.
+     unicode-range mirrors assets/lailara-frame.css so the two stay in step. */
+  @font-face {
+    font-family: 'Playfair Display';
+    font-style: normal;
+    font-weight: 400;
+    src: url('fonts/playfair-display-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+      U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+      U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: 'Playfair Display';
+    font-style: normal;
+    font-weight: 700;
+    src: url('fonts/playfair-display-latin-700.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+      U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+      U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: 'Playfair Display';
+    font-style: normal;
+    font-weight: 400;
+    src: url('fonts/playfair-display-latin-ext.woff2') format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+      U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+      U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  }
+  @font-face {
+    font-family: 'Playfair Display';
+    font-style: normal;
+    font-weight: 700;
+    src: url('fonts/playfair-display-latin-ext-700.woff2') format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+      U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+      U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  }
+  @font-face {
+    font-family: 'Source Sans 3';
+    font-style: normal;
+    font-weight: 400;
+    src: url('fonts/source-sans-3-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+      U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+      U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: 'Source Sans 3';
+    font-style: normal;
+    font-weight: 600;
+    src: url('fonts/source-sans-3-latin-600.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+      U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+      U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: 'Source Sans 3';
+    font-style: normal;
+    font-weight: 400;
+    src: url('fonts/source-sans-3-latin-ext.woff2') format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+      U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+      U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  }
+  @font-face {
+    font-family: 'Source Sans 3';
+    font-style: normal;
+    font-weight: 600;
+    src: url('fonts/source-sans-3-latin-ext-600.woff2') format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+      U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+      U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  }
+
   @page {
     size: letter portrait;
     margin: 0.6in;
     @bottom-left {
-      content: "Cinderhaven Provisions \2014 Distribution Scorecard";
+      /* Literal em dash, not \2014 — a CSS hex escape is terminated by the
+         following space, which consumed it and rendered "Provisions —Distribution".
+         \2014\A0 would not help either: \A0D parses as a longer hex sequence. */
+      content: "Cinderhaven Provisions — Distribution Scorecard";
       font-family: 'Source Sans 3', 'Source Sans Pro', 'Liberation Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
       font-size: 9pt;
       color: {{ colors.text_secondary }};
@@ -141,6 +222,16 @@
   td.right { text-align: right; }
   tr.alt td { background-color: {{ colors.canvas }}; }
 
+  /* Identifiers and counts must never wrap. "CHP-SB-003" broke at its hyphens
+     into "CHP-" / "SB-003", making every row of the exceptions table two lines
+     tall. width:1% with nowrap shrinks each column to its content, leaving the
+     slack to Item Name and Retailer, which are prose and may wrap. */
+  th.nowrap,
+  td.nowrap {
+    white-space: nowrap;
+    width: 1%;
+  }
+
   /* Delta coloring */
   .delta-up { color: {{ colors.teal }}; }
   .delta-down { color: {{ colors.risk }}; }
@@ -248,21 +339,21 @@
 <table>
   <thead>
     <tr>
-      <th>SKU ID</th>
+      <th class="nowrap">SKU ID</th>
       <th>Item Name</th>
       <th>Retailer</th>
-      <th class="right">Stores</th>
-      <th class="right">Max Weeks Silent</th>
+      <th class="right nowrap">Stores</th>
+      <th class="right nowrap">Max Weeks Silent</th>
     </tr>
   </thead>
   <tbody>
     {% for exc in top_exceptions %}
     <tr{% if loop.index is odd %} class="alt"{% endif %}>
-      <td>{{ exc.sku_id }}</td>
+      <td class="nowrap">{{ exc.sku_id }}</td>
       <td>{{ exc.item_name }}</td>
       <td>{{ exc.retailer }}</td>
-      <td class="right">{{ exc.stores }}</td>
-      <td class="right{% if exc.weeks_silent > 12 %} weeks-high{% endif %}">{{ exc.weeks_silent }}</td>
+      <td class="right nowrap">{{ exc.stores }}</td>
+      <td class="right nowrap{% if exc.weeks_silent > 12 %} weeks-high{% endif %}">{{ exc.weeks_silent }}</td>
     </tr>
     {% endfor %}
   </tbody>
