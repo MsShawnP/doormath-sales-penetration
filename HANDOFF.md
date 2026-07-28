@@ -59,9 +59,19 @@ pass blind to it.
 **State:** `main` at 23 commits ahead of `origin/main`. 179 pass, 2 skip. Ruff
 clean. ui-review design checks all pass except one Plotly SVG false positive.
 
-**Deliberately not done:** the hero still leads with 84.7% rather than the
-deficit, and there is still no revenue figure anywhere — both are waiting on the
-revenue-number decision (see What's next).
+**Then, after the revenue decision came back (Option 3):**
+- Added a revenue-at-risk callout on the Door Count gap, driven by a visible,
+  editable `$/item/store/week` input. Default $15 → $2.5M.
+- Threaded it into the exported PDF with the assumption printed inline, below the
+  distribution tables, as a secondary line rather than the hero.
+- No changes to `packages/` — confirmed the schema carries no price, velocity or
+  unit field, and that `scanned` is a boolean.
+- The specified unit was `$/door/week`; shipped `$/item/store/week` after
+  flagging it, because the gap is pair-counted and a per-door rate discards the
+  depth of the gap. Decision recorded in DECISIONS.md.
+
+**Still not done:** the hero continues to lead with 84.7% rather than the
+deficit. Reframing it was not part of the revenue decision.
 
 ### Session 15 — Design-system compliance (2026-07-02)
 
@@ -251,14 +261,14 @@ revenue-number decision (see What's next).
 1. **Deploy.** `main` is 23 commits ahead of the live site, and everything above
    — the misread chart labels, the wrong PDF caption, the alphabetical Top
    Exceptions — is still live for prospects until it ships.
-2. **Revenue framing, pending a decision.** The 30-second CEO/CFO read found the
-   hero leads with 84.7% (reads as good news) when the story is the 3,241 pairs
-   producing nothing, and that no dollar figure appears anywhere. The synthetic
-   data has no price or velocity field, so showing revenue at risk means either
-   adding one to the store universe — which triggers the data change protocol in
-   DECISIONS.md — or stating an explicit assumption in the UI. Awaiting a
-   decision from Claude Fable before either the hero reframing or the dollar
-   figure is built.
+2. **Two open questions on the revenue callout.**
+   - The **on-screen Scorecard does not show it** — only the Door Count tab and
+     the exported PDF do. Since the screen scorecard otherwise mirrors the PDF,
+     printing carries a line the preview does not. One line to add if that
+     divergence is unwanted; left alone because the instruction named the PDF.
+   - **The hero still leads with 84.7%**, which reads as good news when the story
+     is the 3,241 pairs producing nothing. Reframing it was not part of the
+     revenue decision.
 3. **Re-vendor the frame upstream.** `lailara-frame.css` v1.3.0's base layer fixes
    a defect every Lailara tool on v1.2.0 or earlier inherits (Times New Roman
    fallback, missing canvas). The fix currently exists only in this repo's

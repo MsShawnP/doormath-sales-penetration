@@ -1,5 +1,48 @@
 # Door Math — Decisions
 
+## 2026-07-27 — Revenue at risk
+
+**Revenue at risk is a stated assumption, never inferred from the data.**
+The gap was reported only in item-store pairs, which no executive can price.
+Rather than add a price or velocity field to the store universe — which would
+trigger the data change protocol below and propagate across all five Cinderhaven
+tools — the rate is supplied by the reader through a visible input on the Door
+Count tab. Confirmed against the schema before building: `stores` carries
+store_id / retailer_id / retailer_name / region / volume_tier, `auth` carries
+sku_id / store_id / retailer_id / authorized / authorized_date, and `scans`
+carries sku_id / store_id / week / **scanned as a boolean**. The data cannot say
+how much sold, only whether it sold. That is precisely why the rate has to come
+from outside it. No file under `packages/` was touched.
+
+**The rate is $/item/store/week, overruling an earlier $/door/week.**
+The gap is counted in item-store pairs, so a per-door rate is a unit mismatch:
+applying it literally means collapsing to the 616 doors with any gap and charging
+each the same regardless of depth, so a door missing 14 of 40 items and one
+missing 1 of 22 carry identical risk. That contradicts the tool's own thesis —
+depth is half of what Door Math measures. Both units can express the same total
+($15/item/store/week and $78.92/door/week both give $2.5M today); they diverge
+exactly when the mix changes, which is when the tool should notice. Default $15.
+
+**The assumption is printed inline with the figure, in both surfaces.**
+On screen the input carries its unit in the label and an italic note states the
+figure is not measured. In the PDF the two are a single sentence — "≈$2.5M/yr
+revenue at risk on 3,241 authorized pairs not scanning — assumes
+$15/item/store/week" — so the number cannot be quoted without the rate that
+produced it. In the PDF it sits below the distribution tables, above Top
+Exceptions, at 9.5pt with a 1pt Red-42 left rule: secondary by construction,
+never the hero. A test asserts that placement so a later edit cannot promote it.
+
+**The rate lives in a shared `dcc.Store`, and the input persists.**
+Tab content is swapped, so `dc-rev-rate` is not mounted when the Scorecard builds
+its PDF — a `State` reference to it would fail. The store mirrors the value for
+the PDF callback, and `persistence="session"` on the input stops the assumption
+silently resetting to the default when the reader navigates away and back.
+
+**The PDF's gap is derived from the rows the PDF prints.**
+`gap_pairs` is summed from `retailer_rows`, not recomputed, so the printed money
+figure cannot drift from the printed distribution. Verified equal to the Door
+Count gap under three filter states (3,241 / 999 / 73).
+
 ## 2026-07-27 — Review pass (improve + code review + UI review)
 
 **TDP and ACV% keep their different bases; the documentation was wrong.**
