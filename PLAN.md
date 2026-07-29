@@ -73,8 +73,31 @@ yet deployed. Deploy first. Revenue framing blocked pending a decision.
   .dockerignore, gitleaks. Tests 157 → 179, including batch-vs-reference parity
   proved by fault injection.
 - **Deferred:** revenue framing and the hero reframing (blocked on a decision
-  about whether the store universe gains a price field); PDF-under-test via CI;
-  dependency lockfile; MAX_CONTENT_LENGTH; PDF executor saturation; unreachable
-  empty state; empty-filter semantics differing on Trends; duplication clusters.
+  about whether the store universe gains a price field) — **resolved and shipped
+  2026-07-29**, see below; PDF-under-test via CI; dependency lockfile;
+  MAX_CONTENT_LENGTH; PDF executor saturation; unreachable empty state;
+  empty-filter semantics differing on Trends; duplication clusters.
   All listed under "Known-but-unfixed" in HANDOFF.md.
 - **Next review:** 2026-08-24
+
+### 2026-07-29 — Ship, then font integrity
+- **Trigger:** continuation of the 2026-07-27 pass — deploy the fixes, then
+  resolve the deferred revenue decision.
+- **What was fixed:** the revenue-at-risk callout, driven by a visible
+  user-editable $/item/store/week assumption with **no change to the store
+  universe** (the data has no price, velocity, or unit count — `scanned` is a
+  boolean); gap cards now state the per-store reading behind each pair count, so
+  "999" sanity-checks itself; the PDF actually embeds Playfair Display and Source
+  Sans 3 instead of falling back to DejaVu/Liberation, fits one page, and its
+  footer separator renders; and **Source Sans 3 "regular" was ExtraLight
+  outlines** — not a mislabel, proved by advance width — now replaced from
+  `@fontsource` with a test asserting every face is the weight it claims.
+  Deployed as Fly v20 and verified against the live site.
+- **Verification:** PDF rendered in the production Docker image (WeasyPrint
+  cannot run on Windows, which is what hid the font fallback); 179 tests pass;
+  every ui-review DOM, layout and design check green on production.
+- **Opened, not closed:** the ExtraLight file is in **34 repos portfolio-wide**.
+  Door Math is fixed; 33 are not, 9 of them linked from lailarallc.com/work. The
+  sweep is fully scoped with a validated detector at `tools/face_audit.py`, but
+  execution belongs to `lailara-frame` first and is not Door Math work.
+- **Next review:** 2026-08-24 (unchanged)

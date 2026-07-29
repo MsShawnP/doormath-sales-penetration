@@ -1,5 +1,58 @@
 # Door Math — Failures
 
+## 2026-07-29
+
+**A measurement tool read as evidence before checking it measured anything — twice.**
+First: a font-weight probe requested `font-family: 'Source Sans 3', sans-serif` and
+reported six weights collapsing into two groups, which looked like clean confirmation
+of the CSS Fonts L4 nearest-match rule. It was measuring **Arial** throughout. The tell
+was a "system fallback" control arm matching weight 400 to two decimal places — a
+coincidence that isn't one. Second, minutes later: a ground-truth probe compared two
+repos' stylesheets and reported identical widths, appearing to contradict the detector.
+Same root cause — asking for the family *by name* lets any system-installed copy answer.
+Fix both times: load each file under a **unique** family name nothing on the machine can
+satisfy, and include a deliberately-broken path as a negative control. Lesson: a probe
+needs an arm that fails when the probe is broken, or a null result is indistinguishable
+from a clean one.
+
+**A font-face detector that was syntactically right and semantically blind.**
+Written to assert every `@font-face`'s declared weight matches its file's
+`usWeightClass`. Two bugs, both found by running it against repos whose answers were
+already known. (1) It resolved `url()` against the stylesheet's own directory, so the
+PDF template's `fonts/…` — which WeasyPrint resolves against a passed `base_url` —
+reported 8 false mismatches on a verified-clean repo. Fixed with a basename fallback
+across the repo. (2) It didn't exclude `renv/`, returning 931 phantom mismatches from
+vendored R package CSS. Lesson: the same error class recurred four times this project —
+matching on filename instead of font family, a URL grep reading prose as a deploy claim,
+config assumed at depth 1. Each rule was correct as written and wrong about what it
+meant.
+
+**"One canonical bad file propagated everywhere" was false.**
+An early scan found 44 byte-identical copies of the bad latin file and 37 of latin-ext,
+which suggested a known-bad hash list would find every instance. At least three variants
+exist — `fe93b8f82d…`, `30164609c163` (28,740 bytes), and `c6ba61588d7d` (60,088 bytes,
+nearly four times the correct file, still ExtraLight). The third sits in `lailara-frame`,
+the first repo any sweep touches, and a hash list built from the first two walks straight
+past it. Lesson: detect by the **defect** (`usWeightClass` ≠ declared weight), verify by
+the **target** hash. Broad detector, exact verifier — never the reverse.
+
+**WSL could not host WeasyPrint; Docker Desktop was the only route.**
+Pango and Cairo were already present in WSL Ubuntu, so a venv looked like the cheap path
+to rendering the PDF on Linux. `ensurepip` is unavailable (Ubuntu splits `python3-venv`),
+and there was no `pip`, `uv`, `pipx`, or passwordless sudo. Every remaining option meant
+downloading and executing an installer. Launching the already-installed Docker Desktop
+was both permitted and better — the Dockerfile *is* production, so the render tested what
+actually ships, including proving the brand fonts win over the `fonts-liberation` package
+the image installs.
+
+**Repo-wide scans under-counted three times before settling.**
+28 repos, then 34, then a correction to the deploy-config figures. The affected-repo count
+was wrong because the glob matched filenames rather than the font's internal family name,
+missing six repos — three of them linked from the portfolio. The deploy-config count was
+wrong because it stat'd repo root, and seven of eight "no-deploy-config" repos keep
+`wrangler.jsonc` or `fly.toml` one level down. Lesson: for a sweep, publish the discovery
+*rule*, not a list of repo names. A list inherits every scan bug silently.
+
 ## 2026-07-27
 
 **Chart labels were "fixed" against the wrong overlap and shipped wrong numbers

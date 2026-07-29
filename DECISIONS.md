@@ -1,5 +1,56 @@
 # Door Math — Decisions
 
+## 2026-07-29 — Font integrity and the cross-repo sweep
+
+**Detect by weight, verify by hash, never detect by hash.**
+A font file is affected when its `OS/2.usWeightClass` disagrees with the
+`font-weight` its `@font-face` declares. That is the defect, and it catches the
+whole class — ExtraLight in the 400 slot, a Light 300, or a correct file simply
+declared wrong. The four pinned `@fontsource` md5s are the *verification* target
+after replacement. **Do not** build a known-bad hash list and scan for it: at
+least three bad variants exist and the list is not closed, so a hash-based
+detector produces false confidence. The two directions are not symmetric.
+
+**Font binaries and stylesheet changes never ship in the same commit.**
+A binary swap is hash-verifiable and fails visibly. A CSS change is semantic,
+layers against each consumer's own overrides, and can fail in one tool and not
+another. Bundled, a bad result has two candidate causes and no clean bisect —
+and this project has already seen the worse version of that, where the font
+files were fine and the `font-family` declaration was the defect. **Do not**
+fold the frame's v1.3.0 base layer, or a new Sans 500 face, into the font sweep,
+even while editing the same directory.
+
+**Every vendored font face carries a test asserting its file is the weight it claims.**
+`tests/test_pdf_fonts.py::TestFontFilesAreTheWeightTheyClaim` asserts declared
+weight equals `usWeightClass`, that no two weights share identical outlines, and
+that heavier weights are wider. It needs only fontTools, so it runs on Windows
+where WeasyPrint cannot. This bug class has now shipped twice — a bold face that
+was a byte-copy of the regular (`c60a37b`), then ExtraLight outlines in the
+regular slot (`ed2815f`) — and neither was visible by filename or by eye.
+`tools/face_audit.py` is the same check as a CLI over arbitrary repos.
+
+**Revenue at risk is a stated assumption in the UI, never a data field.**
+The store universe carries no price, velocity, or unit count — `scanned` is a
+boolean, so the data cannot say how much sold, only whether it sold. Revenue at
+risk is therefore computed from a visible, user-editable rate, labelled as an
+assumption, defaulted sensibly. **Do not** add price or velocity fields to
+`cinderhaven-store-universe` to make this number "real"; the package feeds all
+five Cinderhaven tools and the assumption belongs to the reader, not the dataset.
+
+**A pair count is always shown with its per-store reading.**
+"999 pairs not scanning" is arithmetically right and intuitively meaningless — it
+reads as implausible to someone who knows the account, because "item-store pair"
+is an analyst unit. Each gap card states the count *and* the median items missing
+per store across the door count, so the headline number sanity-checks itself.
+
+**For a multi-repo sweep, publish the discovery rule, not a list of repos.**
+Three scans under-counted before settling, because each hardcoded list inherited
+the bug of the scan that produced it. The handoff specifies the detector, its
+exclusions (`node_modules`, `renv`, `_freeze`, `.quarto`, `output`, `*_files`),
+and two control repos with independently established answers — clean and affected
+— so a wrong answer is distinguishable from a wrong detector. **Do not** hand a
+downstream session a repo list as the work definition.
+
 ## 2026-07-27 — Revenue at risk
 
 **Revenue at risk is a stated assumption, never inferred from the data.**

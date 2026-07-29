@@ -2,9 +2,56 @@
 
 ## Current phase
 
-Review pass complete — audit, code review and UI review run, findings fixed
-across 23 commits on `main`. **Not deployed.** The live site is now well behind
-`main`; a deploy is the first thing the next session should do.
+Review pass complete and **shipped**. 31 commits on `main`, pushed, deployed as
+Fly **v20**. Live assets verified against HEAD; every ui-review DOM, layout and
+design check passes on production. 179 tests pass, 2 skip (WeasyPrint on
+Windows), ruff clean.
+
+Door Math itself needs nothing. The open work is **portfolio-wide**: the Source
+Sans "regular" files are ExtraLight outlines in 34 repos. Door Math is fixed;
+the other 33 are not. See Session 17 below.
+
+### Session 17 — ExtraLight discovery and cross-repo sweep scoping (2026-07-29)
+
+**Started from:** Session 16's fixes committed but undeployed, live site on v18.
+
+**Did:** Deployed v20 and verified it. Then, chasing a PDF font-fallback bug,
+found `source-sans-3-latin.woff2` and `-latin-ext.woff2` are genuinely
+ExtraLight (`usWeightClass` 200) while declared `font-weight: 400` — not a
+mislabel, provable by advance width (634 vs 652 for `H`). Fixed here, then
+scoped the portfolio: **34 repos, 64 source files.** Built and validated a
+weight-vs-declaration detector, now at `tools/face_audit.py`.
+
+**State:** Door Math clean and live. Sweep scoped, **not started**.
+
+**Next:**
+1. Copy `tools/face_audit.py` into `lailara-frame` — that is its real home,
+   next to the pytest guard, because the frame is where the bad file propagated
+   from. Door Math is holding it only so it survived the session.
+2. Fix `lailara-frame` first: 6 files, the two 400-weight faces × three copies
+   (repo root, `demo/static/`, `demo/dash_demo/assets/`). Its 600-weight faces
+   are already correct. **The upstream frame is still at CSS v1.2.0 and still
+   carries the missing-body-base-layer bug fixed here in `ba479a6`** — a
+   separate, deferred CSS pass, not part of the font sweep.
+3. Before the first Cloudflare-deploying swap, verify the **shared**
+   `CLOUDFLARE_API_TOKEN` with one canary deploy. Seven repos share it, so a
+   rotated token fails all of them silently and at once.
+4. Then tier 1 (the 9 affected repos linked from `/work`), then tier 2/3, then
+   `product-data-health-audit` last and alone — its deploy re-runs an R pipeline
+   against the Postgres SSOT, so a fonts-only commit can ship an invisible
+   content change.
+
+**Tracked, not fixed:**
+- 33 sibling repos still serve ExtraLight body text, 9 of them linked from the
+  portfolio.
+- Upstream `lailara-frame` still lacks the body base layer (Times New Roman
+  fallback) for every tool that vendors it.
+- Design system specifies chip/tag at Sans 500 and no 500 face is vendored.
+  Verified **not** a fallback bug — 500 resolves to the 400 face per CSS Fonts
+  L4, measured against the real faces. Cosmetic; belongs to the deferred CSS
+  pass.
+- `retail-velocity-decision-tool` README uses `**Try it live → …**`, violating
+  the no-arrows/no-CTA rule. Separate pass.
 
 ### Session 16 — improve + code review + UI review (2026-07-27)
 
