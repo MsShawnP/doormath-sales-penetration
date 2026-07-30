@@ -665,6 +665,15 @@ def layout():
                             "fontWeight": "600",
                         },
                     ),
+                    html.P(
+                        id="dc-hero-risk",
+                        style={
+                            "fontFamily": FONT_SANS,
+                            "fontSize": "16px",
+                            "color": TEXT_SECONDARY,
+                            "margin": "6px 0 0 0",
+                        },
+                    ),
                     html.Div(
                         [
                             term_disclosure("scanning", inline=True),
@@ -817,6 +826,7 @@ def _publish_revenue_rate(rate):
 
 @callback(
     Output("dc-revenue-figure", "children"),
+    Output("dc-hero-risk", "children"),
     Input("filter-state", "data"),
     Input("dc-rev-rate", "value"),
     Input("main-tabs", "value"),
@@ -824,7 +834,7 @@ def _publish_revenue_rate(rate):
 def _update_revenue_at_risk(filter_json, rate, active_tab):
     """Recompute revenue at risk when the filters or the assumed rate change."""
     if active_tab != "door-count":
-        return no_update
+        return no_update, no_update
 
     filters = json.loads(filter_json) if filter_json else {}
     end_q = filters.get("end_quarter", "Q4 2025")
@@ -833,7 +843,23 @@ def _update_revenue_at_risk(filter_json, rate, active_tab):
     gap_cards = _compute_retailer_gaps(auth, [end_q])
     gap_pairs = sum(c["gap_raw"] for c in gap_cards)
 
-    return _fmt_usd_compact(_revenue_at_risk(gap_pairs, rate))
+    risk = _revenue_at_risk(gap_pairs, rate)
+    if gap_pairs == 0:
+        hero_risk = "Every authorized item-store pair is scanning this quarter."
+    elif risk > 0:
+        # The finding, dollarized, in the hero — assumption named inline.
+        hero_risk = [
+            f"{gap_pairs:,} authorized pairs not scanning — ",
+            html.B(
+                f"{_fmt_usd_compact(risk)}/yr at risk",
+                style={"color": RED_42},
+            ),
+            f" at the assumed ${float(rate):g}/item-store-week",
+        ]
+    else:
+        hero_risk = f"{gap_pairs:,} authorized pairs not scanning."
+
+    return _fmt_usd_compact(risk), hero_risk
 
 
 @callback(
