@@ -21,7 +21,7 @@
     font-size: 15px;
     color: var(--ll-london-35);
     line-height: 1.6;
-    max-width: 660px;
+    max-width: var(--ll-body-max-width, 720px);
     margin: 0;
 }
 
@@ -526,7 +526,7 @@ select:focus {
     color: var(--ll-london-35);
     line-height: 1.6;
     margin: 4px 0 8px 14px;
-    max-width: 640px;
+    max-width: var(--ll-body-max-width, 720px);
 }
 
 /* Glossary block — collapsible container with all terms */
