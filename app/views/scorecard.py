@@ -222,8 +222,9 @@ def _compute_scorecard_data(filters):
             .reset_index()
             # Rank by silent-store count, matching the Exceptions tab.  Ranking by
             # max weeks silent is degenerate: every SKU has at least one pair that
-            # never scanned in the window, so max_weeks is the 104 sentinel for all
-            # 50 SKUs and .head(10) just returned the alphabetically-first ten.
+            # never scanned in the window, so max_weeks is near the top of the
+            # range (weeks since authorization, 2024-W01..W26) for all 50 SKUs
+            # and .head(10) would mostly reflect authorization-date noise.
             .sort_values(
                 ["stores", "max_weeks", "sku_id"],
                 ascending=[False, False, True],

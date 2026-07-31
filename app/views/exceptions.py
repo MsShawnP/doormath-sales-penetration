@@ -52,8 +52,15 @@ def sku_to_product_line(sku_id):
 
 
 def _demo_as_of_week_index():
-    """Return the week index for DEMO_AS_OF_DATE (2025-W52)."""
-    iso = DEMO_AS_OF_DATE.isocalendar()
+    """Return the anchor week index for weeks-silent math (2025-W52).
+
+    DEMO_AS_OF_DATE is Monday 2025-12-29, which ISO-8601 places in
+    2026-W01.  Anchoring on that week overstated every weeks-silent
+    figure by one versus the final data week.  The anchor is the last
+    *completed* scan week: seven days earlier lands on 2025-12-22,
+    which truly falls in 2025-W52 — the last week in the scan data.
+    """
+    iso = (DEMO_AS_OF_DATE - pd.Timedelta(days=7)).isocalendar()
     return iso[0] * 100 + iso[1]
 
 
@@ -90,9 +97,18 @@ def compute_exceptions(filters):
     parts = merged["last_scan_week"].str.split("-W", expand=True)
     last_year = pd.to_numeric(parts[0], errors="coerce")
     last_week = pd.to_numeric(parts[1], errors="coerce")
-    merged["weeks_silent"] = (
-        ((demo_year - last_year) * 52 + (demo_week - last_week)).fillna(104).astype(int)
-    )
+    weeks_since_scan = (demo_year - last_year) * 52 + (demo_week - last_week)
+
+    # Never-scanned pairs have no last_scan_week.  Their true silence span
+    # is the time since authorization ('YYYY-Wnn' week strings, always
+    # present for authorized pairs) — not a flat sentinel.  They remain
+    # visibly distinct via last_scan_date == "Never".
+    auth_parts = merged["authorized_date"].str.split("-W", expand=True)
+    auth_year = pd.to_numeric(auth_parts[0], errors="coerce")
+    auth_week = pd.to_numeric(auth_parts[1], errors="coerce")
+    weeks_since_auth = (demo_year - auth_year) * 52 + (demo_week - auth_week)
+
+    merged["weeks_silent"] = weeks_since_scan.fillna(weeks_since_auth).astype(int)
 
     # Filter to exceptions: weeks_silent > threshold
     exceptions = merged[merged["weeks_silent"] > SILENCE_THRESHOLD_WEEKS].copy()
