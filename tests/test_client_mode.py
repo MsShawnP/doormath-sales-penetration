@@ -97,6 +97,42 @@ def test_deliverable_carries_basis_window_and_convention(tmp_path):
     assert "DRAFT" in html
 
 
+def test_window_label_tracks_scan_span_not_a_hardcode(tmp_path):
+    """The rendered Window label must be the ACTUAL scan-week span and move
+    with the data. The suite asserted the number of exceptions and the literal
+    'Window: scan weeks' prefix, never the dates — a hardcoded span that matched
+    the demo would pass, the failure mode behind trade-spend's 'trailing 52
+    weeks' on a 26-week dataset.
+
+    Both halves: assert each distinct span's full window substring is present,
+    AND assert the other span's substring (a stand-in for a hardcode) is absent."""
+    sp, ap, stp = _write_trio(tmp_path)
+    cfg = _write_config(tmp_path)
+    first_a = min(WEEKS)
+    early_b = first_a - timedelta(weeks=20)          # still a Saturday, on-grid
+    win_a = f"scan weeks {first_a.strftime('%b %d, %Y')} – {AS_OF.strftime('%b %d, %Y')}"
+    win_b = f"scan weeks {early_b.strftime('%b %d, %Y')} – {AS_OF.strftime('%b %d, %Y')}"
+
+    res_a = client_mode.run(str(cfg), str(tmp_path / "out_a"), _args(str(sp), str(ap), str(stp)))
+    html_a = Path(res_a["report"]).read_text(encoding="utf-8")
+    assert win_a in html_a and win_b not in html_a
+
+    # Span B: one earlier scan week -> the window start must move back with it.
+    scans_b = pd.read_csv(sp)
+    scans_b = pd.concat([scans_b, pd.DataFrame(
+        [("S1", SKU, early_b.strftime("%Y-%m-%d"), 4, 20.0)], columns=scans_b.columns)],
+        ignore_index=True)
+    scans_b.to_csv(sp, index=False)
+    res_b = client_mode.run(str(cfg), str(tmp_path / "out_b"), _args(str(sp), str(ap), str(stp)))
+    html_b = Path(res_b["report"]).read_text(encoding="utf-8")
+    assert win_b in html_b and win_a not in html_b   # not fixed to span A
+
+    for html in (html_a, html_b):
+        low = html.lower()
+        assert "trailing 52" not in low and "52-week" not in low and "52 weeks" not in low
+        assert "365d" not in low
+
+
 def test_missing_units_blocks(tmp_path):
     sp, ap, stp = _write_trio(tmp_path)
     pd.read_csv(sp).drop(columns=["units_sold"]).to_csv(sp, index=False)
