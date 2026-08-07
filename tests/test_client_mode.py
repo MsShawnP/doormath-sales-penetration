@@ -86,6 +86,31 @@ def test_weeks_silent_is_date_arithmetic_not_iso_week(tmp_path):
     assert int(s6["weeks_silent"]) == 9
 
 
+def test_threshold_label_and_exception_count_track_config_together(tmp_path):
+    """basis.silence_threshold_weeks drives BOTH the rendered 'silent > N weeks'
+    label AND the exceptions filter (weeks_silent > N). They must move together:
+    a caption that tracks config while the filter uses a hardcoded threshold (or
+    vice versa) is the caption-vs-math divergence class (ENGAGEMENT-READY-
+    CHECKLIST). The clean-trio test pins the count at the default threshold=4;
+    here a distinctive threshold must move the count and the caption in one run."""
+    import yaml
+    sp, ap, stp = _write_trio(tmp_path)
+    cfg = tmp_path / "engagement.demo.yml"
+    cfg.write_text(yaml.safe_dump({
+        "client": {"name": "Cinderhaven Provisions (demo)"}, "engagement": {"id": "T-1"},
+        "as_of_date": "2025-12-27", "demo": True,
+        "basis": {"week_convention": "week_ending_saturday", "silence_threshold_weeks": 10}}),
+        encoding="utf-8")
+    res = client_mode.run(str(cfg), str(tmp_path / "out"), _args(str(sp), str(ap), str(stp)))
+    assert res["status"] == "ok"
+    # S5 (never scanned) is 15 weeks silent, S6 is 9. At the default threshold 4
+    # both are exceptions (n==2); at 10 only S5 qualifies — the count moved.
+    assert res["n_exceptions"] == 1
+    html = Path(res["report"]).read_text(encoding="utf-8")
+    assert "&gt; 10 weeks" in html                   # caption tracks the threshold
+    assert "&gt; 4 weeks" not in html                # demo default threshold must not survive
+
+
 def test_deliverable_carries_basis_window_and_convention(tmp_path):
     sp, ap, stp = _write_trio(tmp_path)
     cfg = _write_config(tmp_path)
