@@ -274,3 +274,30 @@ When `retailers=[]` or `product_lines=[]`, `filter_auth` treats empty lists as "
 
 **Non-blocking PDF generation with ThreadPoolExecutor.**
 WeasyPrint PDF rendering is CPU-bound and blocks the Gunicorn worker thread. Two-pronged fix: (1) switched Dockerfile from sync workers to `gthread` with 2 threads (threads share memory, no extra cost on 1024MB VM), (2) wrapped `HTML(string=...).write_pdf()` in a ThreadPoolExecutor with 30s timeout for defense-in-depth. The executor has `max_workers=1` since concurrent PDF renders would OOM.
+
+## 2026-08-05 — Dormant defect: weeks-silent `*52` year-bridge (DO NOT fix now)
+
+**The demo weeks-silent math approximates a year as 52 ISO weeks; the corrected
+anchor currently masks it. A data reseed or year roll will unmask it.**
+
+`app/views/exceptions.py` computes weeks-silent as
+`(demo_year - last_year) * 52 + (demo_week - last_week)` on `YYYY-Wnn` week
+strings. That treats every ISO year as exactly 52 weeks — wrong for 53-week ISO
+years and for spans crossing a year boundary. Today it produces correct demo
+numbers only because the anchor was fixed to `2025-W52` (`_demo_as_of_week_index`
+returns 202552) and the demo scan window sits inside a range where the 52-week
+bridge happens to land right. The output is currently correct and is
+golden-locked (`tests/test_demo_golden.py`), so **we are NOT changing it** —
+touching it would move a golden for a currently-correct surface.
+
+**Trigger that unmasks it (check when this happens):** any change that moves the
+anchor or extends the window across a 53-week ISO year — specifically a
+**data reseed** of `cinderhaven-store-universe` or a **calendar year roll** that
+advances `DEMO_AS_OF_DATE`. When either occurs, re-verify weeks-silent against a
+true date difference; if they diverge, replace the `*52` string arithmetic with
+date arithmetic (`(as_of - last_scan).days // 7`) — the same method Wave 1C's
+client mode already uses.
+
+**Client mode is unaffected:** `client_mode.py` computes weeks-silent by real
+date arithmetic on the declared week grid, so it has no `*52` approximation and
+no year-boundary sensitivity. This entry only concerns the demo/live Dash surface.

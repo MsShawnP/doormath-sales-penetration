@@ -42,3 +42,9 @@ docs/
 
 # No blanket *.md rule: packages/lailara-palette/pyproject.toml declares
 # readme = "README.md", and excluding it would break that package's build.
+
+# --- lailara engagement scaffold ---
+client-data/
+client-output/
+engagement.yml
+engagement.yaml

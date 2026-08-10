@@ -1,0 +1,33 @@
+name: golden
+
+# Gates the demo golden lock: runs ONLY tests/test_demo_golden.py, which pins
+# the demo engine output (penetration rate + exception computation). Any engine
+# drift fails here. This job does NOT run the client-mode suite (that
+# importorskips lailara_engagement, which is not installed in CI).
+#
+# The two vendored packages under packages/ are not on any index, so they are
+# installed by path first (see README Quick start).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  golden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e packages/cinderhaven-store-universe
+          pip install -e packages/lailara-palette
+          pip install -e ".[dev]"
+      - name: Demo golden lock
+        run: python -m pytest tests/test_demo_golden.py -q
