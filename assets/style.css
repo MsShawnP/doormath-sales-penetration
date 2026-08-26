@@ -2,8 +2,12 @@
    Design tokens live in lailara-frame.css (do not duplicate). */
 
 /* Tool intro — prospect orientation above tabs */
+/* Hero content column: the h1, intro paragraph, and glossary share one right
+   edge (--ll-content-measure, frame v1.5.0) so the heading never wraps wider
+   than the intro beneath it. */
 .tool-intro {
     margin-bottom: var(--ll-space-lg);
+    max-width: var(--ll-content-measure, 720px);
 }
 
 /* Sized by .ll-section-title from the frame (22px / 18px mobile). At the old
@@ -21,8 +25,8 @@
     font-size: 15px;
     color: var(--ll-london-35);
     line-height: 1.6;
-    max-width: var(--ll-body-max-width, 720px);
     margin: 0;
+    /* measure inherited from .tool-intro column edge */
 }
 
 /* Tab styling */
@@ -526,7 +530,10 @@ select:focus {
     color: var(--ll-london-35);
     line-height: 1.6;
     margin: 4px 0 8px 14px;
-    max-width: var(--ll-body-max-width, 720px);
+    /* Self-measured: term disclosures also render inline inside view containers
+       that have no content column, so this block caps its own line length at
+       the shared column token rather than inheriting a wide context. */
+    max-width: var(--ll-content-measure, 720px);
 }
 
 /* Glossary block — collapsible container with all terms */
